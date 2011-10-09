@@ -16,6 +16,7 @@ The 'i' stands for Interactive. Here's what it's designed to do:
 * The account names used in the autocompletion are read both from the mapping file and, optionally, from a Ledger file or files. (It runs 'ledger --format %(account) reg" to get the names')
 
 Lots of room for improvement here, but it's a starting point.  To make it work you probably just need to tweak the __init__ method of the Entry object to match the fields in your CSV file.
+Run it with the '-h' or '--help' argument for the option syntax.
 
 Feedback most welcome.
 Quentin Stafford-Fraser

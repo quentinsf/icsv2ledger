@@ -124,16 +124,23 @@ def prompt_for_account(accounts, default):
 def main():
 
     from optparse import OptionParser
-    parser = OptionParser()
-    parser.add_option("-o","--output-file",dest="output_file",help="Ledger file for output", default=None)
-    parser.add_option("-r","--read-file",  dest="ledger_file",help="Read accounts from ledger file")
-    parser.add_option("-m","--map-file",   dest="map_file",   help="Account-mapping CSV file")
-    parser.add_option("-n","--no-header",  dest="no_header",  help="Do not skip the first line",
-                      default=False, action="store_true")
-    parser.add_option("-q","--auiet",  dest="quiet",          help="Don't prompt if account can be deduced",
-                      default=False, action="store_true")
-    parser.add_option("-a","--account", dest="account",  help="the account of this statement",
-                      default="Assets:Bank:Current")
+    usage = "%prog [options] file1.csv [file2.csv...]"
+    parser = OptionParser(usage=usage)
+    parser.add_option("-o","--output-file",dest="output_file",
+            help="Ledger file for output (default file1.ledger etc)", default=None)
+    parser.add_option("-r","--read-file",  dest="ledger_file",
+            help="Read accounts from ledger file")
+    parser.add_option("-m","--map-file",   dest="map_file",   
+            help="Account-mapping CSV file")
+    parser.add_option("-n","--no-header",  dest="no_header",  
+            help="Do not skip the first line of CSV file (often a header line)",
+            default=False, action="store_true")
+    parser.add_option("-q","--auiet",  dest="quiet",
+            help="Don't prompt if account can be deduced, just use it",
+            default=False, action="store_true")
+    parser.add_option("-a","--account", dest="account",  
+            help="The Ledger account of this statement (Assets:Bank:Current)",
+            default="Assets:Bank:Current")
     (options, args) = parser.parse_args()
 
     # We prime the list of accounts by running Ledger on the specified file
@@ -167,7 +174,7 @@ def main():
 
                 # OK, which account should this go in?
                 account_sugg = "Expenses:Unknown"
-               account_found = False
+                account_found = False
                 for m in mappings:
                     pattern = m[0]
                     if type(pattern) is types.StringType:

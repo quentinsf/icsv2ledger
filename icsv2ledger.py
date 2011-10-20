@@ -59,7 +59,7 @@ class Entry:
 
     def journal_entry(self, account):
         """
-        Return a formatted journal entry recordingthis Entry against the specified Ledger account/
+        Return a formatted journal entry recording this Entry against the specified Ledger account/
         """
         out  = "%s/%s/%s * %s\n" % (self.date[6:], self.date[3:5], self.date[:2], self.desc)
         out += "    ; MD5Sum: %s\n" % self.md5sum
@@ -135,7 +135,7 @@ def main():
     parser.add_option("-n","--no-header",  dest="no_header",  
             help="Do not skip the first line of CSV file (often a header line)",
             default=False, action="store_true")
-    parser.add_option("-q","--auiet",  dest="quiet",
+    parser.add_option("-q","--quiet",  dest="quiet",
             help="Don't prompt if account can be deduced, just use it",
             default=False, action="store_true")
     parser.add_option("-a","--account", dest="account",  

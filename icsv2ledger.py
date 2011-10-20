@@ -112,6 +112,10 @@ def prompt_for_account(accounts, default):
                     state -= 1
         return None
 
+    # There are no word deliminators as each account name
+    # is one word.  eg ':' and ' ' are valid parts of account
+    # name and don't indicate a new word
+    readline.set_completer_delims("")
     readline.set_completer(completer)
     if(sys.platform == 'darwin'):
         readline.parse_and_bind ("bind ^I rl_complete")

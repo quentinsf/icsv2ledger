@@ -17,9 +17,45 @@ The 'i' stands for _interactive_. Here's what it's designed to do:
 
 * The account names used in the autocompletion are read both from the mapping file and, optionally, from a Ledger file or files. (It runs 'ledger --format %(account) reg" to get the names')
 
-Lots of room for improvement here, but it's a starting point.  To make it work you probably just need to tweak the ____init____ method of the Entry object to match the fields in your CSV file.
+To use icsv2ledger you need to create a config file, by default .icsv2ledger in the current directory, such as the one below
 
-Run it with the '-h' or '--help' argument for the option syntax.
+<pre>
+[SAV]
+account=Assets:Bank:Savings Account
+currency=AUD
+date=1
+date_format=%d-%b-%y
+desc=6
+credit=2
+debit=-1
+accounts_map=mappings.SAV
+no_header=True
+
+[CHQ]
+account=Assets:Bank:Cheque Account
+currency=AUD
+date=1
+date_format=%d/%m/%Y
+desc=2
+credit=3
+debit=4
+accounts_map=mappings.CHQ
+no_header=False
+</pre>
+
+In the configuration file you need to specify the account name to use, the currency of the account, the column containing the date,
+the format of the dates in that column, the column contain the description, the columns contain credits and debits, the file
+which contains the mappings of payees to account names and whether or not the CSV file has no header line.
+
+Note if your bank uses negative numbers for debits, just set the debit column to -1 and icsv2ledger will ignore the debits.
+
+To run 
+
+<pre>
+./icsv2ledger -a SAV file.csv
+</pre>
+
+which will use the [SAV] section of the config file to process the csv file.
 
 A typical mapping file might look like:
 
@@ -36,9 +72,3 @@ Feedback/contributions most welcome.
 
 Quentin Stafford-Fraser
 http://qandr.org/quentin
-
-
-
-
-
-

@@ -8,6 +8,8 @@
 import csv, sys, os, json
 import md5, re, subprocess, types
 import readline,rlcompleter
+import ConfigParser
+from datetime import datetime
 
 LEDGER = "/usr/local/bin/ledger"
 
@@ -17,29 +19,38 @@ class Entry:
     You will probably need to tweak the __init__ method depending on how your bank represents things.
     """
 
-    def __init__(self, row, csv_account):
+    def __init__(self, row, config, csv_account):
         """
         Parameters:
 
          row is the list of fields read from a line of the CSV file
             This method should put them into the appropriate fields of the object.
 
+         config is the ConfigParser instance
+
          csv_account is the name of the Ledger account for which this is a statement
              e.g. "Assets:Bank:Checking"
 
         """
 
-        # The example is for LloydsTSB personal online banking.
-        # The description field self.desc will be used to choose the Ledger account.
-        # Different institutions represent credits and debits either from their or your point of view
-        # so, to be clear, here we use 'credit' to mean money coming IN to the account for which this 
-        # is a statement.
-        # If your bank only records positive or negative numbers you can choose whether to assign them
-        # to credit or debit, or just assign them to credit and set debit to the empty string.
-        self.date,self.type,self.sortcode,self.account,self.desc,self.debit,self.credit,self.balance = row[:8]
-        self.desc = self.desc.strip()
+        self.date = row[config.getint(csv_account, 'date') - 1]
+        self.date = datetime.strptime(self.date, config.get(csv_account, 'date_format')).strftime("%Y/%m/%d")
 
-        self.csv_account = csv_account
+        self.desc = row[config.getint(csv_account, 'desc') - 1]
+        self.desc.strip()
+
+        if config.getint(csv_account, 'credit') < 0:
+            self.credit = ""
+        else:
+            self.credit = row[config.getint(csv_account, 'credit') - 1]
+
+        if config.getint(csv_account, 'debit') < 0:
+            self.debit = ""
+        else:
+            self.debit = row[config.getint(csv_account, 'debit') - 1]
+
+        self.csv_account = config.get(csv_account, 'account')
+        self.currency = config.get(csv_account, 'currency')
 
         # Ironically, we have to recreate the CSV line to keep it for reference
         # I don't think the otherwise excellent CSV library has a way to get the original line.
@@ -61,7 +72,7 @@ class Entry:
         """
         Return a formatted journal entry recording this Entry against the specified Ledger account/
         """
-        out  = "%s/%s/%s * %s\n" % (self.date[6:], self.date[3:5], self.date[:2], self.desc)
+        out  = "%s * %s\n" % (self.date, self.desc)
         out += "    ; MD5Sum: %s\n" % self.md5sum
         out += "    ; CSV: \"%s\"\n" % self.csv
         out += "    %-60s%s\n" % (account, ("   " + self.debit) if self.debit else "")
@@ -130,15 +141,12 @@ def main():
     from optparse import OptionParser
     usage = "%prog [options] file1.csv [file2.csv...]"
     parser = OptionParser(usage=usage)
+    parser.add_option("-c", "--config", dest="config",
+            help="Configuation file for icsv2ledger", default=".icsv2ledger")
     parser.add_option("-o","--output-file",dest="output_file",
             help="Ledger file for output (default file1.ledger etc)", default=None)
     parser.add_option("-r","--read-file",  dest="ledger_file",
             help="Read accounts from ledger file")
-    parser.add_option("-m","--map-file",   dest="map_file",   
-            help="Account-mapping CSV file")
-    parser.add_option("-n","--no-header",  dest="no_header",  
-            help="Do not skip the first line of CSV file (often a header line)",
-            default=False, action="store_true")
     parser.add_option("-q","--quiet",  dest="quiet",
             help="Don't prompt if account can be deduced, just use it",
             default=False, action="store_true")
@@ -147,6 +155,26 @@ def main():
             default="Assets:Bank:Current")
     (options, args) = parser.parse_args()
 
+    config = ConfigParser.ConfigParser();
+
+    if os.path.exists(options.config):
+        config.read(options.config)
+    else:
+        print "Can not find config file: " + options.config
+        return
+
+    if not config.has_section(options.account):
+        print "Config file " + options.config + " does not contain section " + options.account
+        return
+
+    for o in ['account', 'currency', 'date', 'date_format', 'desc', 'credit', 'debit', 'accounts_map', 'no_header']:
+        if not config.has_option(options.account, o):
+            print "Config file " + options.config + " section " + options.account + " does not contain option " + o
+            return
+
+    options.map_file = config.get(options.account, 'accounts_map')
+    options.no_header = config.getboolean(options.account, 'no_header')
+            
     # We prime the list of accounts by running Ledger on the specified file
     accounts = set([])
     if options.ledger_file:
@@ -174,7 +202,7 @@ def main():
                 output = output_file
 
             for row in bank_reader:
-                entry = Entry(row, options.account)
+                entry = Entry(row, config, options.account)
 
                 # OK, which account should this go in?
                 account_sugg = "Expenses:Unknown"

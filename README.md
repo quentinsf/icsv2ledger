@@ -7,13 +7,13 @@ The 'i' stands for _interactive_. Here's what it's designed to do:
 
 * For each .csv file you give it, it creates a .ledger file output (unless you specify an output file, in which case all output goes into the one file).
 
-* As it runs through the entries in the CSV file, it tries to guess which Ledger account they should be posted against, based on your historical decisions.
+* As it runs through the entries in the CSV file, it tries to guess which Ledger account and Ledger payee they should be posted against, based on your historical decisions.
 
-* It _shows you_ which account it's going to use, giving you the opportunity to change it.  If it got it right, just hit return.
+* It _shows you_ which account or payee it's going to use, giving you the opportunity to change it.  If it got it right, just hit return.
 
-* When you are entering an account name, you get _auto-completion_ if you press the Tab key.  You don't have to match the _start_ of the account name, so on my system, typing 'foo[tab]' inserts 'Expenses:Food'.
+* When you are entering an account/payee name, you get _auto-completion_ if you press the Tab key.  You don't have to match the _start_ of the name, so on my system, typing 'foo[tab]' inserts 'Expenses:Food'.
 
-* It stores the history in a mapping file, for converting transaction descriptions onto account names. You can also edit this by hand. It can load this in future as the basis of its guesses.  It uses simple string-matching by default, but if you put a '/' at the start and end of a string it will instead be interpreted as a regular expression.
+* It stores the history in a mapping file, for converting transaction descriptions onto account/payee names. You can also edit this by hand. It can load this in future as the basis of its guesses.  It uses simple string-matching by default, but if you put a '/' at the start and end of a string it will instead be interpreted as a regular expression.
 
 * The account names used in the autocompletion are read both from the mapping file and, optionally, from a Ledger file or files. (It runs 'ledger --format %(account) reg" to get the names')
 
@@ -29,6 +29,7 @@ desc=6
 credit=2
 debit=-1
 accounts_map=mappings.SAV
+payees_map=payees.SAV
 no_header=True
 
 [CHQ]
@@ -40,12 +41,16 @@ desc=2
 credit=3
 debit=4
 accounts_map=mappings.CHQ
+payees_map=payees.CHQ
 no_header=False
 </pre>
 
-In the configuration file you need to specify the account name to use, the currency of the account, the column containing the date,
-the format of the dates in that column, the column contain the description, the columns contain credits and debits, the file
-which contains the mappings of payees to account names and whether or not the CSV file has no header line.
+In the configuration file you need to specify the account name to use, the
+currency of the account, the column containing the date, the format of the
+dates in that column, the column contain the description, the columns contain
+credits and debits, the file which contains the mappings of payees to account
+names, the file which contains the mapping of CSV payees to ledger payees and
+whether or not the CSV file has no header line.
 
 Note if your bank uses negative numbers for debits, just set the debit column to -1 and icsv2ledger will ignore the debits.
 

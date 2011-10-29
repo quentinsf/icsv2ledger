@@ -8,6 +8,8 @@
 import csv, sys, os, json
 import md5, re, subprocess, types
 import readline,rlcompleter
+import ConfigParser
+from datetime import datetime
 
 LEDGER = "/usr/local/bin/ledger"
 
@@ -17,29 +19,46 @@ class Entry:
     You will probably need to tweak the __init__ method depending on how your bank represents things.
     """
 
-    def __init__(self, row, csv_account):
+    def __init__(self, row, config, csv_account):
         """
         Parameters:
 
          row is the list of fields read from a line of the CSV file
             This method should put them into the appropriate fields of the object.
 
+         config is the ConfigParser instance
+
          csv_account is the name of the Ledger account for which this is a statement
              e.g. "Assets:Bank:Checking"
 
         """
 
-        # The example is for LloydsTSB personal online banking.
-        # The description field self.desc will be used to choose the Ledger account.
-        # Different institutions represent credits and debits either from their or your point of view
-        # so, to be clear, here we use 'credit' to mean money coming IN to the account for which this 
-        # is a statement.
-        # If your bank only records positive or negative numbers you can choose whether to assign them
-        # to credit or debit, or just assign them to credit and set debit to the empty string.
-        self.date,self.type,self.sortcode,self.account,self.desc,self.debit,self.credit,self.balance = row[:8]
-        self.desc = self.desc.strip()
+        # Get the date and convert it into a ledger formatted date.
+        self.date = row[config.getint(csv_account, 'date') - 1]
+        self.date = datetime.strptime(self.date, config.get(csv_account, 'date_format')).strftime("%Y/%m/%d")
 
-        self.csv_account = csv_account
+        self.desc = row[config.getint(csv_account, 'desc') - 1]
+        self.desc.strip()
+
+        if config.getint(csv_account, 'credit') < 0:
+            self.credit = ""
+        else:
+            self.credit = row[config.getint(csv_account, 'credit') - 1]
+
+        if config.getint(csv_account, 'debit') < 0:
+            self.debit = ""
+        else:
+            self.debit = row[config.getint(csv_account, 'debit') - 1]
+
+        self.csv_account = config.get(csv_account, 'account')
+        self.currency = config.get(csv_account, 'currency')
+
+        # Append the currency to the credits and debits.
+        if self.credit != "":
+            self.credit = self.currency + " " + self.credit
+
+        if self.debit != "":
+            self.debit = self.currency + " " + self.debit
 
         # Ironically, we have to recreate the CSV line to keep it for reference
         # I don't think the otherwise excellent CSV library has a way to get the original line.
@@ -47,6 +66,8 @@ class Entry:
 
         # We also record this - in future we may use it to avoid duplication
         self.md5sum = md5.new(self.csv).hexdigest()
+
+        self.printed_header = False
 
 
     def prompt(self):
@@ -57,11 +78,11 @@ class Entry:
         return "%s %-40s %s" % (self.date, self.desc, self.credit if self.credit else "-" + self.debit)
 
 
-    def journal_entry(self, account):
+    def journal_entry(self, account, payee):
         """
         Return a formatted journal entry recording this Entry against the specified Ledger account/
         """
-        out  = "%s/%s/%s * %s\n" % (self.date[6:], self.date[3:5], self.date[:2], self.desc)
+        out  = "%s * %s\n" % (self.date, payee)
         out += "    ; MD5Sum: %s\n" % self.md5sum
         out += "    ; CSV: \"%s\"\n" % self.csv
         out += "    %-60s%s\n" % (account, ("   " + self.debit) if self.debit else "")
@@ -70,8 +91,14 @@ class Entry:
         
 
 
+def payees_from_ledger(ledger_file):
+    return from_ledger(ledger_file, "%(payee)\n")
+
 def accounts_from_ledger(ledger_file):
-    cmd = [LEDGER, "-f", ledger_file, "--format", "%(account)\n", "reg"]
+    return from_ledger(ledger_file, "%(account)\n")
+
+def from_ledger(ledger_file, format_string):
+    cmd = [LEDGER, "-f", ledger_file, "--format", format_string, "reg"]
     p = subprocess.Popen(
         cmd,
         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -99,15 +126,13 @@ def read_mappings(map_file):
                 mappings.append((pattern, account))
     return mappings
 
-def prompt_for_account(accounts, default):
-    # print accounts
-    completions = {}
+def prompt_for_value(prompt, values, default):
 
     def completer(text, state):
-        for acc in accounts:
-            if text.upper() in acc.upper():
+        for val in values:
+            if text.upper() in val.upper():
                 if not state:
-                    return acc
+                    return val
                 else:
                     state -= 1
         return None
@@ -122,7 +147,7 @@ def prompt_for_account(accounts, default):
     else:
         readline.parse_and_bind("tab: complete")
 
-    return raw_input('Account [%s] > ' % default)
+    return raw_input(prompt + ' [%s] > ' % default)
 
 
 def main():
@@ -130,15 +155,12 @@ def main():
     from optparse import OptionParser
     usage = "%prog [options] file1.csv [file2.csv...]"
     parser = OptionParser(usage=usage)
+    parser.add_option("-c", "--config", dest="config",
+            help="Configuation file for icsv2ledger", default=".icsv2ledger")
     parser.add_option("-o","--output-file",dest="output_file",
             help="Ledger file for output (default file1.ledger etc)", default=None)
     parser.add_option("-r","--read-file",  dest="ledger_file",
             help="Read accounts from ledger file")
-    parser.add_option("-m","--map-file",   dest="map_file",   
-            help="Account-mapping CSV file")
-    parser.add_option("-n","--no-header",  dest="no_header",  
-            help="Do not skip the first line of CSV file (often a header line)",
-            default=False, action="store_true")
     parser.add_option("-q","--quiet",  dest="quiet",
             help="Don't prompt if account can be deduced, just use it",
             default=False, action="store_true")
@@ -147,17 +169,94 @@ def main():
             default="Assets:Bank:Current")
     (options, args) = parser.parse_args()
 
-    # We prime the list of accounts by running Ledger on the specified file
+    config = ConfigParser.ConfigParser();
+
+    if os.path.exists(options.config):
+        config.read(options.config)
+    else:
+        print "Can not find config file: " + options.config
+        return
+
+    if not config.has_section(options.account):
+        print "Config file " + options.config + " does not contain section " + options.account
+        return
+
+    for o in ['account', 'currency', 'date', 'date_format', 'desc', 'credit', 'debit', 'accounts_map', 'payees_map', 'no_header']:
+        if not config.has_option(options.account, o):
+            print "Config file " + options.config + " section " + options.account + " does not contain option " + o
+            return
+
+    options.accounts_map_file = config.get(options.account, 'accounts_map')
+    options.payees_map_file = config.get(options.account, 'payees_map')
+    options.no_header = config.getboolean(options.account, 'no_header')
+            
+    # We prime the list of accounts and payees by running Ledger on the specified file
     accounts = set([])
+    payees = set([])
     if options.ledger_file:
         accounts = accounts_from_ledger(options.ledger_file)
+        payees = payees_from_ledger(options.ledger_file)
+
 
     # We read from and include accounts from any given mapping file
     mappings = []
-    if options.map_file:
-        mappings = read_mappings(options.map_file)
+    if options.accounts_map_file:
+        mappings = read_mappings(options.accounts_map_file)
         for m in mappings:
             accounts.add(m[1])
+
+    payee_mappings = []
+    if options.payees_map_file:
+        payee_mappings = read_mappings(options.payees_map_file)
+        for m in payee_mappings:
+            payees.add(m[1])
+
+    def get_account(entry):
+        return get_account_or_payee(entry, "Account", accounts, mappings, options.accounts_map_file, "Expenses:Unknown")
+
+    def get_payee(entry):
+        return get_account_or_payee(entry, "Payee", payees, payee_mappings, options.payees_map_file, entry.desc)
+
+    def get_account_or_payee(entry, prompt, possible_values, mappings, map_file, default_suggestion):
+        sugg = default_suggestion
+        found = False
+        for m in mappings:
+            pattern = m[0]
+            if type(pattern) is types.StringType:
+                pattern = pattern.strip()
+                if entry.desc == pattern:
+                    sugg = m[1]
+                    found = True
+            else:
+                # If the pattern isn't a string it's a regex
+                if m[0].match(entry.desc):
+                    sugg = m[1]
+                    found = True
+
+        if options.quiet and found:
+            value = sugg
+        else:
+            if not entry.printed_header:
+                entry.printed_header = True
+                print "\n" + entry.prompt()
+
+            value  = prompt_for_value(prompt, possible_values, sugg)
+            if not value:
+                value = sugg
+
+        if not found or (value != sugg):
+            # Add new or changed mapping to mappings and append to file
+            mappings.append((entry.desc, value))
+
+            if map_file:
+                with open(map_file,"a") as values_map_file:
+                    values_map_file.write("\"%s\",\"%s\"\n" % (entry.desc, value) )
+
+
+            # Add new possible_values to possible_values list
+            possible_values.add(value)
+
+        return value
 
     def process_csv_file(csv_filename, output_file):
 
@@ -174,45 +273,11 @@ def main():
                 output = output_file
 
             for row in bank_reader:
-                entry = Entry(row, options.account)
+                entry = Entry(row, config, options.account)
+                account = get_account(entry)
+                payee = get_payee(entry)
 
-                # OK, which account should this go in?
-                account_sugg = "Expenses:Unknown"
-                account_found = False
-                for m in mappings:
-                    pattern = m[0]
-                    if type(pattern) is types.StringType:
-                        pattern = pattern.strip()
-                        if entry.desc == pattern:
-                            account_sugg = m[1]
-                            account_found = True
-                    else:
-                        # If the pattern isn't a string it's a regex
-                        if m[0].match(entry.desc):
-                            account_sugg = m[1]
-                            account_found = True
-
-                if options.quiet and account_found:
-                    account = account_sugg
-                else:
-                    print "\n" + entry.prompt()
-                    account  = prompt_for_account(accounts, account_sugg)
-                    if not account:
-                        account = account_sugg
-
-                if not account_found or (account != account_sugg):
-                    # Add new or changed mapping to mappings and append to file
-                    mappings.append((entry.desc, account))
-
-                    if options.map_file:
-                        with open(options.map_file,"a") as map_file:
-                            map_file.write("\"%s\",\"%s\"\n" % (entry.desc, account) )
-
-
-                    # Add new accounts to accounts list
-                    accounts.add(account)
-
-                print >>output, entry.journal_entry(account) + "\n"
+                print >>output, entry.journal_entry(account, payee) + "\n"
 
             if not output_file:
                 output.close()

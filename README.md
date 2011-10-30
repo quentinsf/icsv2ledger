@@ -17,7 +17,9 @@ The 'i' stands for _interactive_. Here's what it's designed to do:
 
 * The account names used in the autocompletion are read both from the mapping file and, optionally, from a Ledger file or files. (It runs 'ledger --format %(account) reg" to get the names')
 
-To use icsv2ledger you need to create a config file, by default .icsv2ledger in the current directory, such as the one below
+To use icsv2ledger you need to create a config file.
+The default config file is called .icsv2ledger in the current directory.
+The following is an example configuration file.
 
 <pre>
 [SAV]
@@ -45,22 +47,34 @@ payees_map=payees.CHQ
 no_header=False
 </pre>
 
-In the configuration file you need to specify the account name to use, the
-currency of the account, the column containing the date, the format of the
-dates in that column, the column contain the description, the columns contain
-credits and debits, the file which contains the mappings of payees to account
-names, the file which contains the mapping of CSV payees to ledger payees and
-whether or not the CSV file has no header line.
+The configuration file contains one section per bank account you wish to import.
+In the above example there are two bank accounts: SAV and CHQ.
 
-Note if your bank uses negative numbers for debits, just set the debit column to -1 and icsv2ledger will ignore the debits.
+Now for each account you need to specify the following.
+"account" is the ledger account to post the entries in.
+"currency" is the the currency to prepend to each transaction.
+If you don't wish to record any currency just leave the value to be blank.
+"date" is the column in the CSV file which records the transaction date.
+The first column in the CSV file is numbered 1.
+"date_format" describes the format of the date.
+See the [python documentation](http://docs.python.org/library/datetime.html#strftime-strptime-behavior) for the various format codes supported in this expression.
+"desc" is the column containing the transaction description as supplied by the bank.
+This is the column that will be used as the input for determing which payee and account to use by the auto-completion.
+"credit" is the column which contains credits to the account.
+"debit" is the column which contains debits to the account.
+If your bank represents debits as negative numbers in the credit column,
+than just set "debit" to be "-1" and icsv2ledger will do the right thing.
+"accounts_map" is the file which holds the mapping between the description and the account name to use.
+"payees_map" is the file which holds the mapping between the description and the payee to use.
+"no_header" should be set to true if first row in the CSV file is not a header.
 
-To run 
+To run, use the following command
 
 <pre>
 ./icsv2ledger -a SAV file.csv
 </pre>
 
-which will use the [SAV] section of the config file to process the csv file.
+The above command will use the [SAV] section of the config file to process the csv file.
 
 A typical mapping file might look like:
 

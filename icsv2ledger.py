@@ -110,7 +110,6 @@ def from_ledger(ledger_file, format_string):
     items = set()
     for item in stdout_data.splitlines():
         items.add(item)
-    print items
     return items
 
 def read_mappings(map_file):

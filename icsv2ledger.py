@@ -11,8 +11,6 @@ import readline,rlcompleter
 import ConfigParser
 from datetime import datetime
 
-LEDGER = "/usr/local/bin/ledger"
-
 class Entry:
     """
     This represents one entry in the CSV file.
@@ -98,15 +96,22 @@ def accounts_from_ledger(ledger_file):
     return from_ledger(ledger_file, "%(account)\n")
 
 def from_ledger(ledger_file, format_string):
-    cmd = [LEDGER, "-f", ledger_file, "--format", format_string, "reg"]
+    ledger = 'ledger'
+    for f in ['/usr/bin/ledger', '/usr/local/bin/ledger']:
+        if os.path.exists(f):
+            ledger = f
+            break
+
+    cmd = [ledger, "-f", ledger_file, "--format", format_string, "reg"]
     p = subprocess.Popen(
         cmd,
         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     (stdout_data, stderr_data) = p.communicate()
-    accounts = set()
-    for a in stdout_data.splitlines():
-        accounts.add(a)
-    return accounts
+    items = set()
+    for item in stdout_data.splitlines():
+        items.add(item)
+    print items
+    return items
 
 def read_mappings(map_file):
     """

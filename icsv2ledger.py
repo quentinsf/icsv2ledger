@@ -76,13 +76,16 @@ class Entry:
         return "%s %-40s %s" % (self.date, self.desc, self.credit if self.credit else "-" + self.debit)
 
 
-    def journal_entry(self, account, payee):
+    def journal_entry(self, account, payee, output_tags):
         """
         Return a formatted journal entry recording this Entry against the specified Ledger account/
         """
         out  = "%s * %s\n" % (self.date, payee)
-        out += "    ; MD5Sum: %s\n" % self.md5sum
-        out += "    ; CSV: \"%s\"\n" % self.csv
+
+        if output_tags:
+            out += "    ; MD5Sum: %s\n" % self.md5sum
+            out += "    ; CSV: \"%s\"\n" % self.csv
+
         out += "    %-60s%s\n" % (account, ("   " + self.debit) if self.debit else "")
         out += "    %-60s%s\n" % (self.csv_account,  ("   " + self.credit) if self.credit else "")
         return out
@@ -171,6 +174,9 @@ def main():
     parser.add_option("-a","--account", dest="account",  
             help="The Ledger account of this statement (Assets:Bank:Current)",
             default="Assets:Bank:Current")
+    parser.add_option("--no-output-tags", dest="output_tags",
+            help="Don't output the MD5SUM and CSV tags in the ledger transaction",
+            default=True, action="store_false")
     (options, args) = parser.parse_args()
 
     config = ConfigParser.ConfigParser();
@@ -281,7 +287,7 @@ def main():
                 account = get_account(entry)
                 payee = get_payee(entry)
 
-                print >>output, entry.journal_entry(account, payee) + "\n"
+                print >>output, entry.journal_entry(account, payee, options.output_tags) + "\n"
 
             if not output_file:
                 output.close()

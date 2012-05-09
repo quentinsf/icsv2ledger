@@ -6,7 +6,7 @@
 # Requires Python >= 2.5 and Ledger >= 3.0
 
 import csv, sys, os, json
-import md5, re, subprocess, types
+import hashlib, re, subprocess, types
 import readline,rlcompleter
 import ConfigParser
 from datetime import datetime
@@ -63,7 +63,7 @@ class Entry:
         self.csv = ",".join(row)
 
         # We also record this - in future we may use it to avoid duplication
-        self.md5sum = md5.new(self.csv).hexdigest()
+        self.md5sum = hashlib.md5(self.csv).hexdigest()
 
         self.printed_header = False
 

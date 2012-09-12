@@ -129,7 +129,12 @@ def read_mappings(map_file):
             if len(row) > 1:
                 pattern, account = row[0].strip(), row[1].strip()
                 if pattern.startswith('/') and pattern.endswith('/'):
-                    pattern = re.compile(pattern[1:-1])
+                    try:
+                        pattern = re.compile(pattern[1:-1])
+                    except re.error as e:
+                        sys.stderr.write("Invalid regex '%s' in '%s': %s\n" %
+                                         (pattern, map_file, e))
+                        sys.exit(1)
                 mappings.append((pattern, account))
     return mappings
 

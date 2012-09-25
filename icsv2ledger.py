@@ -74,14 +74,12 @@ class Entry:
 
         self.printed_header = False
 
-
     def prompt(self):
         """
         We print a summary of the record on the screen, and allow you to choose the destination account.
         What should go in that summary?
         """
         return "%s %-40s %s" % (self.date, self.desc, self.credit if self.credit else "-" + self.debit)
-
 
     def journal_entry(self, account, payee, output_tags):
         """
@@ -97,7 +95,6 @@ class Entry:
         out += "    %-60s%s\n" % (self.csv_account,  ("   " + self.credit) if self.credit else "")
         return out
         
-
 
 def payees_from_ledger(ledger_file):
     return from_ledger(ledger_file, "%(payee)\n")

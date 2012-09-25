@@ -192,7 +192,7 @@ def main():
             default=True, action="store_false")
     (options, args) = parser.parse_args()
 
-    config = ConfigParser.ConfigParser();
+    config = ConfigParser.ConfigParser()
 
     if os.path.exists(options.config):
         config.read(options.config)

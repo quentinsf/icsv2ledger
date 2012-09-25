@@ -5,7 +5,7 @@
 #
 # Requires Python >= 2.5 and Ledger >= 3.0
 
-import csv, sys, os, json
+import csv, sys, os
 import hashlib, re, subprocess, types
 import readline,rlcompleter
 import ConfigParser

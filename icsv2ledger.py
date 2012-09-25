@@ -17,6 +17,7 @@ import rlcompleter
 import ConfigParser
 from datetime import datetime
 
+
 class Entry:
     """
     This represents one entry in the CSV file.
@@ -101,8 +102,10 @@ class Entry:
 def payees_from_ledger(ledger_file):
     return from_ledger(ledger_file, "%(payee)\n")
 
+
 def accounts_from_ledger(ledger_file):
     return from_ledger(ledger_file, "%(account)\n")
+
 
 def from_ledger(ledger_file, format_string):
     ledger = 'ledger'
@@ -120,6 +123,7 @@ def from_ledger(ledger_file, format_string):
     for item in stdout_data.splitlines():
         items.add(item)
     return items
+
 
 def read_mappings(map_file):
     """
@@ -143,6 +147,7 @@ def read_mappings(map_file):
                         sys.exit(1)
                 mappings.append((pattern, account))
     return mappings
+
 
 def prompt_for_value(prompt, values, default):
 

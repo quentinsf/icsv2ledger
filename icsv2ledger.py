@@ -5,9 +5,15 @@
 #
 # Requires Python >= 2.5 and Ledger >= 3.0
 
-import csv, sys, os
-import hashlib, re, subprocess, types
-import readline,rlcompleter
+import csv
+import sys
+import os
+import hashlib
+import re
+import subprocess
+import types
+import readline
+import rlcompleter
 import ConfigParser
 from datetime import datetime
 

@@ -1,5 +1,5 @@
 #! /usr/bin/env python
-# 
+#
 # Read CSV files and produce Ledger files out,
 # prompting for and learning accounts on the way.
 #
@@ -184,7 +184,7 @@ def main():
     parser.add_option("-q","--quiet",  dest="quiet",
             help="Don't prompt if account can be deduced, just use it",
             default=False, action="store_true")
-    parser.add_option("-a","--account", dest="account",  
+    parser.add_option("-a","--account", dest="account",
             help="The Ledger account of this statement (Assets:Bank:Current)",
             default="Assets:Bank:Current")
     parser.add_option("--no-output-tags", dest="output_tags",

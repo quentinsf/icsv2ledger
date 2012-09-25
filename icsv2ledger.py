@@ -130,7 +130,7 @@ def read_mappings(map_file):
     If the match string begins and ends with '/' it is taken to be a regular expression.
     """
     mappings  = []
-    with open(map_file,"r") as mf:
+    with open(map_file, "r") as mf:
         map_reader = csv.reader(mf)
         for row in map_reader:
             if len(row) > 1:
@@ -163,7 +163,7 @@ def prompt_for_value(prompt, values, default):
     readline.set_completer_delims("")
     readline.set_completer(completer)
     if 'libedit' in readline.__doc__:
-        readline.parse_and_bind ("bind ^I rl_complete")
+        readline.parse_and_bind("bind ^I rl_complete")
     else:
         readline.parse_and_bind("tab: complete")
 
@@ -177,14 +177,14 @@ def main():
     parser = OptionParser(usage=usage)
     parser.add_option("-c", "--config", dest="config",
             help="Configuation file for icsv2ledger", default=".icsv2ledger")
-    parser.add_option("-o","--output-file",dest="output_file",
+    parser.add_option("-o", "--output-file", dest="output_file",
             help="Ledger file for output (default file1.ledger etc)", default=None)
-    parser.add_option("-r","--read-file",  dest="ledger_file",
+    parser.add_option("-r", "--read-file", dest="ledger_file",
             help="Read accounts from ledger file")
-    parser.add_option("-q","--quiet",  dest="quiet",
+    parser.add_option("-q", "--quiet", dest="quiet",
             help="Don't prompt if account can be deduced, just use it",
             default=False, action="store_true")
-    parser.add_option("-a","--account", dest="account",
+    parser.add_option("-a", "--account", dest="account",
             help="The Ledger account of this statement (Assets:Bank:Current)",
             default="Assets:Bank:Current")
     parser.add_option("--no-output-tags", dest="output_tags",
@@ -271,7 +271,7 @@ def main():
             mappings.append((entry.desc, value))
 
             if map_file:
-                with open(map_file,"a") as values_map_file:
+                with open(map_file, "a") as values_map_file:
                     values_map_file.write("\"%s\",\"%s\"\n" % (entry.desc, value) )
 
             # Add new possible_values to possible_values list
@@ -304,7 +304,7 @@ def main():
                 output.close()
 
     if options.output_file:
-        output_file = open(options.output_file,"w")
+        output_file = open(options.output_file, "w")
     else:
         output_file = None
 

@@ -94,7 +94,7 @@ class Entry:
         out += "    %-60s%s\n" % (account, ("   " + self.debit) if self.debit else "")
         out += "    %-60s%s\n" % (self.csv_account,  ("   " + self.credit) if self.credit else "")
         return out
-        
+
 
 def payees_from_ledger(ledger_file):
     return from_ledger(ledger_file, "%(payee)\n")
@@ -212,7 +212,7 @@ def main():
     options.accounts_map_file = config.get(options.account, 'accounts_map')
     options.payees_map_file = config.get(options.account, 'payees_map')
     options.no_header = config.getboolean(options.account, 'no_header')
-            
+
     # We prime the list of accounts and payees by running Ledger on the specified file
     accounts = set([])
     payees = set([])
@@ -319,5 +319,5 @@ def main():
 
 if __name__ == "__main__":
     main()
-    
+
 # vim: ts=4 sw=4 et

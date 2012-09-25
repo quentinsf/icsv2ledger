@@ -220,7 +220,6 @@ def main():
         accounts = accounts_from_ledger(options.ledger_file)
         payees = payees_from_ledger(options.ledger_file)
 
-
     # We read from and include accounts from any given mapping file
     mappings = []
     if options.accounts_map_file:
@@ -275,7 +274,6 @@ def main():
                 with open(map_file,"a") as values_map_file:
                     values_map_file.write("\"%s\",\"%s\"\n" % (entry.desc, value) )
 
-
             # Add new possible_values to possible_values list
             possible_values.add(value)
 
@@ -304,7 +302,6 @@ def main():
 
             if not output_file:
                 output.close()
-
 
     if options.output_file:
         output_file = open(options.output_file,"w")

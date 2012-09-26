@@ -58,6 +58,7 @@ class Entry:
         self.csv_account = config.get(csv_account, 'account')
         self.currency = config.get(csv_account, 'currency')
         self.append_currency = config.getboolean(csv_account, 'append_currency')
+        self.cleared_character = config.get(csv_account, 'cleared_character')
 
         # Append the currency to the credits and debits.
         if self.credit != "":
@@ -92,7 +93,7 @@ class Entry:
         """
         Return a formatted journal entry recording this Entry against the specified Ledger account/
         """
-        out  = "%s * %s\n" % (self.date, payee)
+        out  = "%s %s %s\n" % (self.date, self.cleared_character, payee)
 
         if output_tags:
             out += "    ; MD5Sum: %s\n" % self.md5sum
@@ -204,7 +205,8 @@ def main():
     config = ConfigParser.ConfigParser(
         defaults={
             'default_expense': 'Expenses:Unknown',
-            'append_currency': False})
+            'append_currency': False,
+            'cleared_character': '*'})
 
     if os.path.exists(options.config):
         config.read(options.config)

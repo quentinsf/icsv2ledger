@@ -69,6 +69,7 @@ than just set "debit" to be "-1" and icsv2ledger will do the right thing.
 "accounts_map" is the file which holds the mapping between the description and the account name to use.
 "payees_map" is the file which holds the mapping between the description and the payee to use.
 "no_header" should be set to true if first row in the CSV file is not a header.
+"cleared_character" is character to mark a transaction as cleared. Ledger possible value are '*' or '!' or <empty>. Default is '*'.
 
 To run, use the following command
 

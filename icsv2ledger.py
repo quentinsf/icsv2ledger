@@ -57,13 +57,20 @@ class Entry:
 
         self.csv_account = config.get(csv_account, 'account')
         self.currency = config.get(csv_account, 'currency')
+        self.append_currency = config.getboolean(csv_account, 'append_currency')
 
         # Append the currency to the credits and debits.
         if self.credit != "":
-            self.credit = self.currency + " " + self.credit
+            if self.append_currency:
+                self.credit = self.credit + " " + self.currency
+            else:
+                self.credit = self.currency + " " + self.credit
 
         if self.debit != "":
-            self.debit = self.currency + " " + self.debit
+            if self.append_currency:
+                self.debit = self.debit + " " + self.currency
+            else:
+                self.debit = self.currency + " " + self.debit
 
         # Ironically, we have to recreate the CSV line to keep it for reference
         # I don't think the otherwise excellent CSV library has a way to get the original line.
@@ -196,7 +203,8 @@ def main():
 
     config = ConfigParser.ConfigParser(
         defaults={
-            'default_expense': 'Expenses:Unknown'})
+            'default_expense': 'Expenses:Unknown',
+            'append_currency': False})
 
     if os.path.exists(options.config):
         config.read(options.config)

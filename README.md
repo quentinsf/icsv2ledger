@@ -55,6 +55,7 @@ Now for each account you need to specify the following.
 "default_expense" is the default ledger account for expense. Default is "Expenses:Unknown".
 "currency" is the the currency to prepend to each transaction.
 If you don't wish to record any currency just leave the value to be blank.
+"append_currency" will append the currency after the amount. Default is "False", so prepend, that is before amount.
 "date" is the column in the CSV file which records the transaction date.
 The first column in the CSV file is numbered 1.
 "date_format" describes the format of the date.

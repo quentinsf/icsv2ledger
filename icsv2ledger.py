@@ -176,20 +176,22 @@ def main():
     usage = "%prog [options] file1.csv [file2.csv...]"
     parser = OptionParser(usage=usage)
     parser.add_option("-c", "--config", dest="config",
-            help="Configuation file for icsv2ledger", default=".icsv2ledger")
+                      help="Configuation file for icsv2ledger",
+                      default=".icsv2ledger")
     parser.add_option("-o", "--output-file", dest="output_file",
-            help="Ledger file for output (default file1.ledger etc)", default=None)
+                      help="Ledger file for output (default file1.ledger etc)",
+                      default=None)
     parser.add_option("-r", "--read-file", dest="ledger_file",
-            help="Read accounts from ledger file")
+                      help="Read accounts from ledger file")
     parser.add_option("-q", "--quiet", dest="quiet",
-            help="Don't prompt if account can be deduced, just use it",
-            default=False, action="store_true")
+                      help="Don't prompt if account can be deduced, just use it",
+                      default=False, action="store_true")
     parser.add_option("-a", "--account", dest="account",
-            help="The Ledger account of this statement (Assets:Bank:Current)",
-            default="Assets:Bank:Current")
+                      help="The Ledger account of this statement (Assets:Bank:Current)",
+                      default="Assets:Bank:Current")
     parser.add_option("--no-output-tags", dest="output_tags",
-            help="Don't output the MD5SUM and CSV tags in the ledger transaction",
-            default=True, action="store_false")
+                      help="Don't output the MD5SUM and CSV tags in the ledger transaction",
+                      default=True, action="store_false")
     (options, args) = parser.parse_args()
 
     config = ConfigParser.ConfigParser()

@@ -52,6 +52,7 @@ In the above example there are two bank accounts: SAV and CHQ.
 
 Now for each account you need to specify the following.
 "account" is the ledger account to post the entries in.
+"default_expense" is the default ledger account for expense. Default is "Expenses:Unknown".
 "currency" is the the currency to prepend to each transaction.
 If you don't wish to record any currency just leave the value to be blank.
 "date" is the column in the CSV file which records the transaction date.

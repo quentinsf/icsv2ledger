@@ -194,7 +194,9 @@ def main():
                       default=True, action="store_false")
     (options, args) = parser.parse_args()
 
-    config = ConfigParser.ConfigParser()
+    config = ConfigParser.ConfigParser(
+        defaults={
+            'default_expense': 'Expenses:Unknown'})
 
     if os.path.exists(options.config):
         config.read(options.config)
@@ -236,7 +238,10 @@ def main():
             payees.add(m[1])
 
     def get_account(entry):
-        return get_account_or_payee(entry, "Account", accounts, mappings, options.accounts_map_file, "Expenses:Unknown")
+        return get_account_or_payee(
+            entry, "Account", accounts, 
+            mappings, options.accounts_map_file, 
+            config.get(options.account, 'default_expense'))
 
     def get_payee(entry):
         return get_account_or_payee(entry, "Payee", payees, payee_mappings, options.payees_map_file, entry.desc)

@@ -105,21 +105,21 @@ class Entry:
 
 
 def payees_from_ledger(ledger_file):
-    return from_ledger(ledger_file, "%(payee)\n")
+    return from_ledger(ledger_file, 'payees')
 
 
 def accounts_from_ledger(ledger_file):
-    return from_ledger(ledger_file, "%(account)\n")
+    return from_ledger(ledger_file, 'accounts')
 
 
-def from_ledger(ledger_file, format_string):
+def from_ledger(ledger_file, command):
     ledger = 'ledger'
     for f in ['/usr/bin/ledger', '/usr/local/bin/ledger']:
         if os.path.exists(f):
             ledger = f
             break
 
-    cmd = [ledger, "-f", ledger_file, "--format", format_string, "reg"]
+    cmd = [ledger, "-f", ledger_file, command]
     p = subprocess.Popen(
         cmd,
         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -230,8 +230,6 @@ def main():
     options.no_header = config.getboolean(options.account, 'no_header')
 
     # We prime the list of accounts and payees by running Ledger on the specified file
-    accounts = set([])
-    payees = set([])
     if options.ledger_file:
         accounts = accounts_from_ledger(options.ledger_file)
         payees = payees_from_ledger(options.ledger_file)

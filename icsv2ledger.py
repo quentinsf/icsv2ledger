@@ -251,8 +251,8 @@ def main():
 
     def get_account(entry):
         return get_account_or_payee(
-            entry, "Account", accounts, 
-            mappings, options.accounts_map_file, 
+            entry, "Account", accounts,
+            mappings, options.accounts_map_file,
             config.get(options.account, 'default_expense'))
 
     def get_payee(entry):

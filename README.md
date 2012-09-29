@@ -72,7 +72,7 @@ Now for each account you need to specify the following:
 * `payees_map` is the file which holds the mapping between the description and the payee to use. _Mandatory_
 * `no_header` should be set to true if first row in the CSV file is not a header. Default is 'False'. _Optional_
 * `cleared_character` is character to mark a transaction as cleared.
-  Ledger possible value are `'*'` or `'!'` or `' '`. Default is `'*'`. _Optional_
+  Ledger possible value are `*` or `!` or ` `. Default is `*`. _Optional_
 
 To run, use the following command
 

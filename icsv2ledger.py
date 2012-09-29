@@ -315,7 +315,7 @@ def main():
                 account = get_account(entry)
                 payee = get_payee(entry)
 
-                print >>output, entry.journal_entry(account, payee, options.output_tags) + "\n"
+                print >>output, entry.journal_entry(account, payee, options.output_tags)
 
             if not output_file:
                 output.close()

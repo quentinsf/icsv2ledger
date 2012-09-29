@@ -204,8 +204,10 @@ def main():
 
     config = ConfigParser.ConfigParser(
         defaults={
+            'expense': '',
             'default_expense': 'Expenses:Unknown',
             'append_currency': False,
+            'no_header': False,
             'cleared_character': '*'})
 
     if os.path.exists(options.config):
@@ -218,7 +220,7 @@ def main():
         print "Config file " + options.config + " does not contain section " + options.account
         return
 
-    for o in ['account', 'currency', 'date', 'date_format', 'desc', 'credit', 'debit', 'accounts_map', 'payees_map', 'no_header']:
+    for o in ['account', 'date', 'date_format', 'desc', 'credit', 'debit', 'accounts_map', 'payees_map']:
         if not config.has_option(options.account, o):
             print "Config file " + options.config + " section " + options.account + " does not contain option " + o
             return

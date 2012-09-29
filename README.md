@@ -50,26 +50,29 @@ no_header=False
 The configuration file contains one section per bank account you wish to import.
 In the above example there are two bank accounts: SAV and CHQ.
 
-Now for each account you need to specify the following.
-"account" is the ledger account to post the entries in.
-"default_expense" is the default ledger account for expense. Default is "Expenses:Unknown".
-"currency" is the the currency to prepend to each transaction.
-If you don't wish to record any currency just leave the value to be blank.
-"append_currency" will append the currency after the amount. Default is "False", so prepend, that is before amount.
-"date" is the column in the CSV file which records the transaction date.
-The first column in the CSV file is numbered 1.
-"date_format" describes the format of the date.
-See the [python documentation](http://docs.python.org/library/datetime.html#strftime-strptime-behavior) for the various format codes supported in this expression.
-"desc" is the column containing the transaction description as supplied by the bank.
-This is the column that will be used as the input for determing which payee and account to use by the auto-completion.
-"credit" is the column which contains credits to the account.
-"debit" is the column which contains debits to the account.
-If your bank represents debits as negative numbers in the credit column,
-than just set "debit" to be "-1" and icsv2ledger will do the right thing.
-"accounts_map" is the file which holds the mapping between the description and the account name to use.
-"payees_map" is the file which holds the mapping between the description and the payee to use.
-"no_header" should be set to true if first row in the CSV file is not a header.
-"cleared_character" is character to mark a transaction as cleared. Ledger possible value are '*' or '!' or <empty>. Default is '*'.
+Now for each account you need to specify the following:
+
+* `account` is the ledger account to post the entries in. _Mandatory_
+* `default_expense` is the default ledger account for expense. Default
+  is 'Expenses:Unknown'. _Optional_
+* `currency` is the the currency of amounts. Default is none. _Optional_
+* `append_currency` will append the currency after the amount. Default
+  is "False", so prepend, that is before amount. _Optional_
+* `date` is the column in the CSV file which records the transaction date.
+  The first column in the CSV file is numbered 1. _Mandatory_
+* `date_format` describes the format of the date.
+  See the [python documentation](http://docs.python.org/library/datetime.html#strftime-strptime-behavior) for the various format codes supported in this expression. _Mandatory_
+* `desc` is the column containing the transaction description as supplied by the bank.
+  This is the column that will be used as the input for determing which payee and account to use by the auto-completion. _Mandatory_
+* `credit` is the column which contains credits to the account. _Mandatory_
+* `debit` is the column which contains debits to the account.
+  If your bank represents debits as negative numbers in the credit
+  column, than just set `debit` to be "-1" and icsv2ledger will do the right thing. _Mandatory_
+* `accounts_map` is the file which holds the mapping between the description and the account name to use. _Mandatory_
+* `payees_map` is the file which holds the mapping between the description and the payee to use. _Mandatory_
+* `no_header` should be set to true if first row in the CSV file is not a header. Default is 'False'. _Optional_
+* `cleared_character` is character to mark a transaction as cleared.
+  Ledger possible value are `'*'` or `'!'` or `' '`. Default is `'*'`. _Optional_
 
 To run, use the following command
 

@@ -204,7 +204,6 @@ def main():
 
     config = ConfigParser.ConfigParser(
         defaults={
-            'expense': '',
             'default_expense': 'Expenses:Unknown',
             'append_currency': False,
             'no_header': False,

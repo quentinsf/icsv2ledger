@@ -229,6 +229,8 @@ def main():
     options.no_header = config.getboolean(options.account, 'no_header')
 
     # We prime the list of accounts and payees by running Ledger on the specified file
+    accounts = set([])
+    payees = set([])
     if options.ledger_file:
         accounts = accounts_from_ledger(options.ledger_file)
         payees = payees_from_ledger(options.ledger_file)

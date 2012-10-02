@@ -59,6 +59,8 @@ class Entry:
         self.currency = config.get(csv_account, 'currency')
         self.append_currency = config.getboolean(csv_account, 'append_currency')
         self.cleared_character = config.get(csv_account, 'cleared_character')
+        self.md5sum_tag = config.getboolean(csv_account, 'md5sum_tag')
+        self.csv_tag = config.getboolean(csv_account, 'csv_tag')
 
         # Append the currency to the credits and debits.
         if self.credit != "":
@@ -89,14 +91,15 @@ class Entry:
         """
         return "%s %-40s %s" % (self.date, self.desc, self.credit if self.credit else "-" + self.debit)
 
-    def journal_entry(self, account, payee, output_tags):
+    def journal_entry(self, account, payee):
         """
         Return a formatted journal entry recording this Entry against the specified Ledger account/
         """
         out  = "%s %s %s\n" % (self.date, self.cleared_character, payee)
 
-        if output_tags:
+        if self.md5sum_tag:
             out += "    ; MD5Sum: %s\n" % self.md5sum
+        if self.csv_tag:
             out += "    ; CSV: \"%s\"\n" % self.csv
 
         out += "    %-60s%s\n" % (account, ("   " + self.debit) if self.debit else "")
@@ -183,37 +186,44 @@ def main():
     from optparse import OptionParser
     usage = "%prog [options] file1.csv [file2.csv...]"
     parser = OptionParser(usage=usage)
-    parser.add_option("-c", "--config", dest="config",
-                      help="Configuation file for icsv2ledger",
+    parser.add_option("-c", "--config", dest="config_filename",
+                      help="Configuration file for icsv2ledger",
                       default=".icsv2ledger")
     parser.add_option("-o", "--output-file", dest="output_file",
                       help="Ledger file for output (default file1.ledger etc)",
                       default=None)
-    parser.add_option("-r", "--read-file", dest="ledger_file",
-                      help="Read accounts from ledger file")
     parser.add_option("-q", "--quiet", dest="quiet",
                       help="Don't prompt if account can be deduced, just use it",
                       default=False, action="store_true")
     parser.add_option("-a", "--account", dest="account",
                       help="The Ledger account of this statement (Assets:Bank:Current)",
                       default="Assets:Bank:Current")
-    parser.add_option("--no-output-tags", dest="output_tags",
-                      help="Don't output the MD5SUM and CSV tags in the ledger transaction",
-                      default=True, action="store_false")
     (options, args) = parser.parse_args()
 
+    # Because of http://bugs.python.org/issue974019, boolean default must be a string
     config = ConfigParser.ConfigParser(
         defaults={
             'default_expense': 'Expenses:Unknown',
-            'append_currency': False,
-            'no_header': False,
-            'cleared_character': '*'})
+            'append_currency': 'False',
+            'no_header': 'False',
+            'cleared_character': '*',
+            'md5sum_tag': 'True',
+            'csv_tag': 'True' })
 
-    if os.path.exists(options.config):
-        config.read(options.config)
+    config_file_locs = (
+        os.path.join('.', options.config_filename),
+        os.path.join(os.path.expanduser("~"), options.config_filename))
+    for loc in config_file_locs:
+        if os.path.exists(loc):
+            config_file = loc
+            break
     else:
-        print "Can not find config file: " + options.config
-        return
+        print "Can't find config file. Put it in one of these locations:"
+        for loc in config_file_locs:
+            print loc
+        sys.exit(1)
+
+    config.read(config_file)
 
     if not config.has_section(options.account):
         print "Config file " + options.config + " does not contain section " + options.account
@@ -227,6 +237,7 @@ def main():
     options.accounts_map_file = config.get(options.account, 'accounts_map')
     options.payees_map_file = config.get(options.account, 'payees_map')
     options.no_header = config.getboolean(options.account, 'no_header')
+    options.ledger_file = config.get(options.account, 'ledger_file')
 
     # We prime the list of accounts and payees by running Ledger on the specified file
     accounts = set([])
@@ -316,7 +327,7 @@ def main():
                 account = get_account(entry)
                 payee = get_payee(entry)
 
-                print >>output, entry.journal_entry(account, payee, options.output_tags)
+                print >>output, entry.journal_entry(account, payee)
 
             if not output_file:
                 output.close()

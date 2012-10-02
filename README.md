@@ -15,10 +15,11 @@ The 'i' stands for _interactive_. Here's what it's designed to do:
 
 * It stores the history in a mapping file, for converting transaction descriptions onto account/payee names. You can also edit this by hand. It can load this in future as the basis of its guesses.  It uses simple string-matching by default, but if you put a '/' at the start and end of a string it will instead be interpreted as a regular expression.
 
-* The account names used in the autocompletion are read both from the mapping file and, optionally, from a Ledger file or files. (It runs 'ledger --format %(account) reg" to get the names')
+* The account names used in the autocompletion are read both from the mapping file and, optionally, from a Ledger file or files. (It runs `ledger accounts` to get the names).
 
 To use icsv2ledger you need to create a config file.
-The default config file is called .icsv2ledger in the current directory.
+Filename will be searched first in current directory, then in home directory. Default filename is '.icsv2ledger'.
+
 The following is an example configuration file.
 
 <pre>
@@ -57,7 +58,7 @@ Now for each account you need to specify the following:
   is 'Expenses:Unknown'. _Optional_
 * `currency` is the the currency of amounts. Default is none. _Optional_
 * `append_currency` will append the currency after the amount. Default
-  is "False", so prepend, that is before amount. _Optional_
+  is `False`, so prepend, that is before amount. _Optional_
 * `date` is the column in the CSV file which records the transaction date.
   The first column in the CSV file is numbered 1. _Mandatory_
 * `date_format` describes the format of the date.
@@ -70,9 +71,12 @@ Now for each account you need to specify the following:
   column, than just set `debit` to be "-1" and icsv2ledger will do the right thing. _Mandatory_
 * `accounts_map` is the file which holds the mapping between the description and the account name to use. _Mandatory_
 * `payees_map` is the file which holds the mapping between the description and the payee to use. _Mandatory_
-* `no_header` should be set to true if first row in the CSV file is not a header. Default is 'False'. _Optional_
+* `no_header` should be set to `True` if first row in the CSV file is not a header. Default is `False`. _Optional_
 * `cleared_character` is character to mark a transaction as cleared.
   Ledger possible value are `*` or `!` or ` `. Default is `*`. _Optional_
+* `csv_tag` will print for every transaction a CSV tag which value is the original CSV line. Default is `True`. _Optional_
+* `md5sum_tag` will print for every transaction a MD5SUM tag of the original CSV line. Default is `True`. _Optional_
+* `ledger_file` is ledger file where to get the list of already defined accounts and payees. _Optional_
 
 To run, use the following command
 

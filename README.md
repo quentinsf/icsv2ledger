@@ -32,7 +32,6 @@ credit=2
 debit=-1
 accounts_map=mappings.SAV
 payees_map=payees.SAV
-no_header=True
 
 [CHQ]
 account=Assets:Bank:Cheque Account
@@ -44,7 +43,7 @@ credit=3
 debit=4
 accounts_map=mappings.CHQ
 payees_map=payees.CHQ
-no_header=False
+skip_lines=0
 </pre>
 
 The configuration file contains one section per bank account you wish to import.
@@ -70,7 +69,8 @@ Now for each account you need to specify the following:
   column, than just set `debit` to be "-1" and icsv2ledger will do the right thing. _Mandatory_
 * `accounts_map` is the file which holds the mapping between the description and the account name to use. _Mandatory_
 * `payees_map` is the file which holds the mapping between the description and the payee to use. _Mandatory_
-* `no_header` should be set to true if first row in the CSV file is not a header. Default is 'False'. _Optional_
+* `skip_lines` is the number of lines to skip from the beginning of the CSV
+  file. The default is `1` to skip the CSV header line. _Optional_
 * `cleared_character` is character to mark a transaction as cleared.
   Ledger possible value are `*` or `!` or ` `. Default is `*`. _Optional_
 

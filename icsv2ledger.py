@@ -58,22 +58,14 @@ class Entry:
 
         self.csv_account = config.get(csv_account, 'account')
         self.currency = config.get(csv_account, 'currency')
-        self.append_currency = config.getboolean(csv_account, 'append_currency')
         self.cleared_character = config.get(csv_account, 'cleared_character')
         self.output_tag_csv_quoting = config.getint(csv_account, 'output_tag_csv_quoting')
-
-        # Append the currency to the credits and debits.
-        if self.credit != "":
-            if self.append_currency:
-                self.credit = self.credit + " " + self.currency
-            else:
-                self.credit = self.currency + " " + self.credit
-
-        if self.debit != "":
-            if self.append_currency:
-                self.debit = self.debit + " " + self.currency
-            else:
-                self.debit = self.currency + " " + self.debit
+        if config.has_option(csv_account, 'transaction_template'):
+            self.transaction_template = config.get(csv_account, 'transaction_template')
+            with open(config.get(csv_account, 'transaction_template'), 'r') as template_file:
+                self.transaction_template = template_file.read().rstrip()
+        else:
+            self.transaction_template = ""
 
         # Ironically, we have to recreate the CSV line to keep it for reference
         # I don't think the otherwise excellent CSV library has a way to get the original line.
@@ -99,18 +91,31 @@ class Entry:
         """
         return "%s %-40s %s" % (self.date, self.desc, self.credit if self.credit else "-" + self.debit)
 
-    def journal_entry(self, account, payee, output_tags):
+    def journal_entry(self, account, payee):
         """
         Return a formatted journal entry recording this Entry against the specified Ledger account/
         """
-        out  = "%s %s %s\n" % (self.date, self.cleared_character, payee)
-
-        if output_tags:
-            out += "    ; MD5Sum: %s\n" % self.md5sum
-            out += "    ; CSV: %s\n" % self.csv
-
-        out += "    %-60s%s\n" % (account, ("   " + self.debit) if self.debit else "")
-        out += "    %-60s%s\n" % (self.csv_account,  ("   " + self.credit) if self.credit else "")
+        default_template = """\
+{date} {cleared_character} {payee}
+    ; MD5Sum: {md5sum}
+    ; CSV: {csv}
+    {account:<60}    {debit_currency} {debit}
+    {csv_account:<60}    {credit_currency} {credit}
+        """
+        template = self.transaction_template if self.transaction_template else default_template
+        out = template.format(**{
+            'account': account,
+            'payee': payee,
+            'date': self.date,
+            'cleared_character': self.cleared_character,
+            'md5sum': self.md5sum,
+            'csv': self.csv,
+            'csv_account': self.csv_account,
+            'credit': self.credit,
+            'credit_currency': self.currency if self.credit else "",
+            'debit': self.debit,
+            'debit_currency': self.currency if self.debit else ""
+            })
         return out
 
 
@@ -207,15 +212,11 @@ def main():
     parser.add_option("-a", "--account", dest="account",
                       help="The Ledger account of this statement (Assets:Bank:Current)",
                       default="Assets:Bank:Current")
-    parser.add_option("--no-output-tags", dest="output_tags",
-                      help="Don't output the MD5SUM and CSV tags in the ledger transaction",
-                      default=True, action="store_false")
     (options, args) = parser.parse_args()
 
     config = ConfigParser.ConfigParser(
         defaults={
             'default_expense': 'Expenses:Unknown',
-            'append_currency': 'no',
             'no_header': 'no',
             'skip_lines': '0',
             'output_tag_csv_quoting': '4',
@@ -240,6 +241,7 @@ def main():
     options.payees_map_file = config.get(options.account, 'payees_map')
     options.skip_lines = config.getint(options.account, 'skip_lines')
     options.no_header = config.getboolean(options.account, 'no_header')
+
 
     # We prime the list of accounts and payees by running Ledger on the specified file
     accounts = set([])
@@ -332,7 +334,7 @@ def main():
                 account = get_account(entry)
                 payee = get_payee(entry)
 
-                print >>output, entry.journal_entry(account, payee, options.output_tags)
+                print >>output, entry.journal_entry(account, payee)
 
             if not output_file:
                 output.close()

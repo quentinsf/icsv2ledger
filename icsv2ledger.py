@@ -276,8 +276,7 @@ def main():
         for m in mappings:
             pattern = m[0]
             if type(pattern) is types.StringType:
-                pattern = pattern.strip()
-                if entry.desc == pattern:
+                if entry.desc.strip() == pattern.strip():
                     sugg = m[1]
                     found = True
             else:

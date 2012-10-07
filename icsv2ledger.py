@@ -217,6 +217,7 @@ def main():
             'default_expense': 'Expenses:Unknown',
             'append_currency': 'no',
             'no_header': 'no',
+            'skip_lines': '0',
             'output_tag_csv_quoting': '4',
             'cleared_character': '*'})
 
@@ -237,6 +238,7 @@ def main():
 
     options.accounts_map_file = config.get(options.account, 'accounts_map')
     options.payees_map_file = config.get(options.account, 'payees_map')
+    options.skip_lines = config.getint(options.account, 'skip_lines')
     options.no_header = config.getboolean(options.account, 'no_header')
 
     # We prime the list of accounts and payees by running Ledger on the specified file
@@ -317,6 +319,7 @@ def main():
             bank_file.seek(0)
             bank_reader = csv.reader(bank_file, dialect)
             # We hardcode the fields, so want to ignore the first line if it's just field names
+            for x in range(0, options.skip_lines): bank_reader.next()
             if not options.no_header: bank_reader.next()
 
             # If output file not specified, use input filename with '.ledger' extension

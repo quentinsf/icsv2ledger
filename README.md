@@ -78,6 +78,7 @@ Now for each account you need to specify the following:
   `QUOTE_MINIMAL`, `QUOTE_ALL`, `QUOTE_NONNUMERIC`, `QUOTE_NONE` respectively.
   A value of `4` will put quotes around the entire CSV line, which is the
   default. _Optional_
+* `skip_lines` is the number of lines to skip from the beginning of the CSV file. _Optional_
 
 To run, use the following command
 

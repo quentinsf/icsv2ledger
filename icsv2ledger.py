@@ -205,8 +205,8 @@ def main():
     config = ConfigParser.ConfigParser(
         defaults={
             'default_expense': 'Expenses:Unknown',
-            'append_currency': False,
-            'no_header': False,
+            'append_currency': 'no',
+            'no_header': 'no',
             'cleared_character': '*'})
 
     if os.path.exists(options.config):

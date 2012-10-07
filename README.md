@@ -26,7 +26,8 @@ The following is an example configuration file.
 account=Assets:Bank:Savings Account
 currency=AUD
 date=1
-date_format=%d-%b-%y
+csv_date_format=%d-%b-%y
+ledger_date_format=%Y/%m/%d
 desc=6
 credit=2
 debit=-1
@@ -38,7 +39,8 @@ no_header=True
 account=Assets:Bank:Cheque Account
 currency=AUD
 date=1
-date_format=%d/%m/%Y
+csv_date_format=%d/%m/%Y
+ledger_date_format=%Y/%m/%d
 desc=2
 credit=3
 debit=4
@@ -58,8 +60,11 @@ Now for each account you need to specify the following:
 * `currency` is the the currency of amounts. Default is none. _Optional_
 * `date` is the column in the CSV file which records the transaction date.
   The first column in the CSV file is numbered 1. _Mandatory_
-* `date_format` describes the format of the date.
-  See the [python documentation](http://docs.python.org/library/datetime.html#strftime-strptime-behavior) for the various format codes supported in this expression. _Mandatory_
+* `csv_date_format` describes the format of the date in the CSV file.
+  See the [python documentation](http://docs.python.org/library/datetime.html#strftime-strptime-behavior) for the various format codes supported in this expression. _Optional_
+* `ledger_date_format` describes the format of the date in the created ledger file.
+  By default the date format from the CSV file is used.
+  See the [python documentation](http://docs.python.org/library/datetime.html#strftime-strptime-behavior) for the various format codes supported in this expression. _Optional_
 * `desc` is the column containing the transaction description as supplied by the bank.
   This is the column that will be used as the input for determing which payee and account to use by the auto-completion. _Mandatory_
 * `credit` is the column which contains credits to the account. _Mandatory_

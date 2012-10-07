@@ -91,7 +91,7 @@ class Entry:
         """
         return "%s %-40s %s" % (self.date, self.desc, self.credit if self.credit else "-" + self.debit)
 
-    def journal_entry(self, account, payee):
+    def journal_entry(self, account, payee, row_index):
         """
         Return a formatted journal entry recording this Entry against the specified Ledger account/
         """
@@ -114,7 +114,8 @@ class Entry:
             'credit': self.credit,
             'credit_currency': self.currency if self.credit else "",
             'debit': self.debit,
-            'debit_currency': self.currency if self.debit else ""
+            'debit_currency': self.currency if self.debit else "",
+            'row_index': row_index,
             })
         return out
 
@@ -329,12 +330,12 @@ def main():
             else:
                 output = output_file
 
-            for row in bank_reader:
+            for i, row in enumerate(bank_reader):
                 entry = Entry(row, config, options.account, dialect)
                 account = get_account(entry)
                 payee = get_payee(entry)
 
-                print >>output, entry.journal_entry(account, payee)
+                print >>output, entry.journal_entry(account, payee, i+1)
 
             if not output_file:
                 output.close()

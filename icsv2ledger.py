@@ -39,6 +39,13 @@ class Entry:
 
         """
 
+
+        if config.has_section(csv_account + "_tags"):
+            self.tags = []
+            for item in config.items(csv_account + "_tags"):
+                if item in config.defaults().items(): continue
+                self.tags.append("%s: %s" % (item[0], row[int(item[1])-1]))
+
         # Get the date and convert it into a ledger formatted date.
         self.date = row[config.getint(csv_account, 'date') - 1]
         if config.has_option(csv_account, 'csv_date_format'):
@@ -125,6 +132,7 @@ class Entry:
             'debit': self.debit,
             'debit_currency': self.currency if self.debit else "",
             'row_index': row_index,
+            'tags': "\n    ; ".join(self.tags),
             })
         return out
 

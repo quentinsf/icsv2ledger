@@ -35,6 +35,11 @@ accounts_map=mappings.SAV
 payees_map=payees.SAV
 no_header=True
 
+[SAV_tags]
+beneficiary=3
+purpose=4
+
+
 [CHQ]
 account=Assets:Bank:Cheque Account
 currency=AUD
@@ -50,7 +55,10 @@ no_header=False
 </pre>
 
 The configuration file contains one section per bank account you wish to import.
+The SAV_tags section adds the addtional data from CSV fields as tags to the ledger transaction.
 In the above example there are two bank accounts: SAV and CHQ.
+For the SAV bank account the data in third CSV field is added as a beneficiary tag
+and the fourth field is added as a purpose tag.
 
 Now for each account you need to specify the following:
 

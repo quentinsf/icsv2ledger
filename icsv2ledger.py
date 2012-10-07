@@ -15,6 +15,7 @@ import types
 import readline
 import rlcompleter
 import ConfigParser
+import StringIO
 from datetime import datetime
 
 
@@ -24,7 +25,7 @@ class Entry:
     You will probably need to tweak the __init__ method depending on how your bank represents things.
     """
 
-    def __init__(self, row, config, csv_account):
+    def __init__(self, row, config, csv_account, csv_dialect):
         """
         Parameters:
 
@@ -59,6 +60,7 @@ class Entry:
         self.currency = config.get(csv_account, 'currency')
         self.append_currency = config.getboolean(csv_account, 'append_currency')
         self.cleared_character = config.get(csv_account, 'cleared_character')
+        self.output_tag_csv_quoting = config.getint(csv_account, 'output_tag_csv_quoting')
 
         # Append the currency to the credits and debits.
         if self.credit != "":
@@ -75,7 +77,15 @@ class Entry:
 
         # Ironically, we have to recreate the CSV line to keep it for reference
         # I don't think the otherwise excellent CSV library has a way to get the original line.
-        self.csv = ",".join(row)
+        output = StringIO.StringIO()
+        if self.output_tag_csv_quoting < 4:
+            csv_dialect.quoting = self.output_tag_csv_quoting
+        writer = csv.writer(output, csv_dialect)
+        writer.writerow(row)
+        self.csv = output.getvalue().strip()
+        if self.output_tag_csv_quoting == 4:
+            self.csv = "\"%s\"" % self.csv
+        output.close()
 
         # We also record this - in future we may use it to avoid duplication
         self.md5sum = hashlib.md5(self.csv).hexdigest()
@@ -97,7 +107,7 @@ class Entry:
 
         if output_tags:
             out += "    ; MD5Sum: %s\n" % self.md5sum
-            out += "    ; CSV: \"%s\"\n" % self.csv
+            out += "    ; CSV: %s\n" % self.csv
 
         out += "    %-60s%s\n" % (account, ("   " + self.debit) if self.debit else "")
         out += "    %-60s%s\n" % (self.csv_account,  ("   " + self.credit) if self.credit else "")
@@ -207,6 +217,7 @@ def main():
             'default_expense': 'Expenses:Unknown',
             'append_currency': 'no',
             'no_header': 'no',
+            'output_tag_csv_quoting': '4',
             'cleared_character': '*'})
 
     if os.path.exists(options.config):
@@ -301,7 +312,10 @@ def main():
 
         with open(csv_filename, 'r') as bank_file:
 
-            bank_reader = csv.reader(bank_file)
+
+            dialect = csv.Sniffer().sniff(bank_file.read(1024))
+            bank_file.seek(0)
+            bank_reader = csv.reader(bank_file, dialect)
             # We hardcode the fields, so want to ignore the first line if it's just field names
             if not options.no_header: bank_reader.next()
 
@@ -312,7 +326,7 @@ def main():
                 output = output_file
 
             for row in bank_reader:
-                entry = Entry(row, config, options.account)
+                entry = Entry(row, config, options.account, dialect)
                 account = get_account(entry)
                 payee = get_payee(entry)
 

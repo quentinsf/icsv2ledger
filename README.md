@@ -73,6 +73,11 @@ Now for each account you need to specify the following:
 * `no_header` should be set to true if first row in the CSV file is not a header. Default is 'False'. _Optional_
 * `cleared_character` is character to mark a transaction as cleared.
   Ledger possible value are `*` or `!` or ` `. Default is `*`. _Optional_
+* `output_tag_csv_quoting` configures how the CSV in the output tag will be
+  quoted. Values below 4 map to the values defined in csv:
+  `QUOTE_MINIMAL`, `QUOTE_ALL`, `QUOTE_NONNUMERIC`, `QUOTE_NONE` respectively.
+  A value of `4` will put quotes around the entire CSV line, which is the
+  default. _Optional_
 
 To run, use the following command
 

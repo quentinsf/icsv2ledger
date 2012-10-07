@@ -26,7 +26,8 @@ The following is an example configuration file.
 account=Assets:Bank:Savings Account
 currency=AUD
 date=1
-date_format=%d-%b-%y
+csv_date_format=%d-%b-%y
+ledger_date_format=%Y/%m/%d
 desc=6
 credit=2
 debit=-1
@@ -34,11 +35,17 @@ accounts_map=mappings.SAV
 payees_map=payees.SAV
 no_header=True
 
+[SAV_tags]
+beneficiary=3
+purpose=4
+
+
 [CHQ]
 account=Assets:Bank:Cheque Account
 currency=AUD
 date=1
-date_format=%d/%m/%Y
+csv_date_format=%d/%m/%Y
+ledger_date_format=%Y/%m/%d
 desc=2
 credit=3
 debit=4
@@ -48,7 +55,10 @@ no_header=False
 </pre>
 
 The configuration file contains one section per bank account you wish to import.
+The SAV_tags section adds the addtional data from CSV fields as tags to the ledger transaction.
 In the above example there are two bank accounts: SAV and CHQ.
+For the SAV bank account the data in third CSV field is added as a beneficiary tag
+and the fourth field is added as a purpose tag.
 
 Now for each account you need to specify the following:
 
@@ -56,12 +66,13 @@ Now for each account you need to specify the following:
 * `default_expense` is the default ledger account for expense. Default
   is 'Expenses:Unknown'. _Optional_
 * `currency` is the the currency of amounts. Default is none. _Optional_
-* `append_currency` will append the currency after the amount. Default
-  is "False", so prepend, that is before amount. _Optional_
 * `date` is the column in the CSV file which records the transaction date.
   The first column in the CSV file is numbered 1. _Mandatory_
-* `date_format` describes the format of the date.
-  See the [python documentation](http://docs.python.org/library/datetime.html#strftime-strptime-behavior) for the various format codes supported in this expression. _Mandatory_
+* `csv_date_format` describes the format of the date in the CSV file.
+  See the [python documentation](http://docs.python.org/library/datetime.html#strftime-strptime-behavior) for the various format codes supported in this expression. _Optional_
+* `ledger_date_format` describes the format of the date in the created ledger file.
+  By default the date format from the CSV file is used.
+  See the [python documentation](http://docs.python.org/library/datetime.html#strftime-strptime-behavior) for the various format codes supported in this expression. _Optional_
 * `desc` is the column containing the transaction description as supplied by the bank.
   This is the column that will be used as the input for determing which payee and account to use by the auto-completion. _Mandatory_
 * `credit` is the column which contains credits to the account. _Mandatory_
@@ -73,6 +84,25 @@ Now for each account you need to specify the following:
 * `no_header` should be set to true if first row in the CSV file is not a header. Default is 'False'. _Optional_
 * `cleared_character` is character to mark a transaction as cleared.
   Ledger possible value are `*` or `!` or ` `. Default is `*`. _Optional_
+* `output_tag_csv_quoting` configures how the CSV in the output tag will be
+  quoted. Values below 4 map to the values defined in csv:
+  `QUOTE_MINIMAL`, `QUOTE_ALL`, `QUOTE_NONNUMERIC`, `QUOTE_NONE` respectively.
+  A value of `4` will put quotes around the entire CSV line, which is the
+  default. _Optional_
+* `skip_lines` is the number of lines to skip from the beginning of the CSV file. _Optional_
+* `transaction_template` path to a file containing the template to use when
+  generating ledger transactions. _Optional_<br>
+  Details on how to format the template are found in the [Format Specification Mini-Language](http://docs.python.org/library/string.html#formatspec).
+  The built-in default template is as follows:
+
+<pre>
+{date} {cleared_character} {payee}
+    ; MD5Sum: {md5sum}
+    ; CSV: {csv}
+    {account:<60}    {debit_currency} {debit}
+    {csv_account:<60}    {credit_currency} {credit}
+</pre>
+
 
 To run, use the following command
 

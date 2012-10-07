@@ -15,6 +15,7 @@ import types
 import readline
 import rlcompleter
 import ConfigParser
+import StringIO
 from datetime import datetime
 
 
@@ -24,7 +25,7 @@ class Entry:
     You will probably need to tweak the __init__ method depending on how your bank represents things.
     """
 
-    def __init__(self, row, config, csv_account):
+    def __init__(self, row, config, csv_account, csv_dialect):
         """
         Parameters:
 
@@ -38,9 +39,25 @@ class Entry:
 
         """
 
+
+        if config.has_section(csv_account + "_tags"):
+            self.tags = []
+            for item in config.items(csv_account + "_tags"):
+                if item in config.defaults().items(): continue
+                self.tags.append("%s: %s" % (item[0], row[int(item[1])-1]))
+
         # Get the date and convert it into a ledger formatted date.
         self.date = row[config.getint(csv_account, 'date') - 1]
-        self.date = datetime.strptime(self.date, config.get(csv_account, 'date_format')).strftime("%Y/%m/%d")
+        if config.has_option(csv_account, 'csv_date_format'):
+            csv_date_format = config.get(csv_account, 'csv_date_format')
+        else:
+            csv_date_format = ""
+        if config.has_option(csv_account, 'ledger_date_format'):
+            ledger_date_format = config.get(csv_account, 'ledger_date_format')
+        else:
+            ledger_date_format = ""
+        if ledger_date_format != csv_date_format:
+            self.date = datetime.strptime(self.date, csv_date_format).strftime(ledger_date_format)
 
         self.desc = row[config.getint(csv_account, 'desc') - 1]
         self.desc.strip()
@@ -57,25 +74,26 @@ class Entry:
 
         self.csv_account = config.get(csv_account, 'account')
         self.currency = config.get(csv_account, 'currency')
-        self.append_currency = config.getboolean(csv_account, 'append_currency')
         self.cleared_character = config.get(csv_account, 'cleared_character')
-
-        # Append the currency to the credits and debits.
-        if self.credit != "":
-            if self.append_currency:
-                self.credit = self.credit + " " + self.currency
-            else:
-                self.credit = self.currency + " " + self.credit
-
-        if self.debit != "":
-            if self.append_currency:
-                self.debit = self.debit + " " + self.currency
-            else:
-                self.debit = self.currency + " " + self.debit
+        self.output_tag_csv_quoting = config.getint(csv_account, 'output_tag_csv_quoting')
+        if config.has_option(csv_account, 'transaction_template'):
+            self.transaction_template = config.get(csv_account, 'transaction_template')
+            with open(config.get(csv_account, 'transaction_template'), 'r') as template_file:
+                self.transaction_template = template_file.read().rstrip()
+        else:
+            self.transaction_template = ""
 
         # Ironically, we have to recreate the CSV line to keep it for reference
         # I don't think the otherwise excellent CSV library has a way to get the original line.
-        self.csv = ",".join(row)
+        output = StringIO.StringIO()
+        if self.output_tag_csv_quoting < 4:
+            csv_dialect.quoting = self.output_tag_csv_quoting
+        writer = csv.writer(output, csv_dialect)
+        writer.writerow(row)
+        self.csv = output.getvalue().strip()
+        if self.output_tag_csv_quoting == 4:
+            self.csv = "\"%s\"" % self.csv
+        output.close()
 
         # We also record this - in future we may use it to avoid duplication
         self.md5sum = hashlib.md5(self.csv).hexdigest()
@@ -89,18 +107,33 @@ class Entry:
         """
         return "%s %-40s %s" % (self.date, self.desc, self.credit if self.credit else "-" + self.debit)
 
-    def journal_entry(self, account, payee, output_tags):
+    def journal_entry(self, account, payee, row_index):
         """
         Return a formatted journal entry recording this Entry against the specified Ledger account/
         """
-        out  = "%s %s %s\n" % (self.date, self.cleared_character, payee)
-
-        if output_tags:
-            out += "    ; MD5Sum: %s\n" % self.md5sum
-            out += "    ; CSV: \"%s\"\n" % self.csv
-
-        out += "    %-60s%s\n" % (account, ("   " + self.debit) if self.debit else "")
-        out += "    %-60s%s\n" % (self.csv_account,  ("   " + self.credit) if self.credit else "")
+        default_template = """\
+{date} {cleared_character} {payee}
+    ; MD5Sum: {md5sum}
+    ; CSV: {csv}
+    {account:<60}    {debit_currency} {debit}
+    {csv_account:<60}    {credit_currency} {credit}
+        """
+        template = self.transaction_template if self.transaction_template else default_template
+        out = template.format(**{
+            'account': account,
+            'payee': payee,
+            'date': self.date,
+            'cleared_character': self.cleared_character,
+            'md5sum': self.md5sum,
+            'csv': self.csv,
+            'csv_account': self.csv_account,
+            'credit': self.credit,
+            'credit_currency': self.currency if self.credit else "",
+            'debit': self.debit,
+            'debit_currency': self.currency if self.debit else "",
+            'row_index': row_index,
+            'tags': "\n    ; ".join(self.tags),
+            })
         return out
 
 
@@ -197,16 +230,14 @@ def main():
     parser.add_option("-a", "--account", dest="account",
                       help="The Ledger account of this statement (Assets:Bank:Current)",
                       default="Assets:Bank:Current")
-    parser.add_option("--no-output-tags", dest="output_tags",
-                      help="Don't output the MD5SUM and CSV tags in the ledger transaction",
-                      default=True, action="store_false")
     (options, args) = parser.parse_args()
 
     config = ConfigParser.ConfigParser(
         defaults={
             'default_expense': 'Expenses:Unknown',
-            'append_currency': False,
-            'no_header': False,
+            'no_header': 'no',
+            'skip_lines': '0',
+            'output_tag_csv_quoting': '4',
             'cleared_character': '*'})
 
     if os.path.exists(options.config):
@@ -219,14 +250,16 @@ def main():
         print "Config file " + options.config + " does not contain section " + options.account
         return
 
-    for o in ['account', 'date', 'date_format', 'desc', 'credit', 'debit', 'accounts_map', 'payees_map']:
+    for o in ['account', 'date', 'desc', 'credit', 'debit', 'accounts_map', 'payees_map']:
         if not config.has_option(options.account, o):
             print "Config file " + options.config + " section " + options.account + " does not contain option " + o
             return
 
     options.accounts_map_file = config.get(options.account, 'accounts_map')
     options.payees_map_file = config.get(options.account, 'payees_map')
+    options.skip_lines = config.getint(options.account, 'skip_lines')
     options.no_header = config.getboolean(options.account, 'no_header')
+
 
     # We prime the list of accounts and payees by running Ledger on the specified file
     accounts = set([])
@@ -263,8 +296,7 @@ def main():
         for m in mappings:
             pattern = m[0]
             if type(pattern) is types.StringType:
-                pattern = pattern.strip()
-                if entry.desc == pattern:
+                if entry.desc.strip() == pattern.strip():
                     sugg = m[1]
                     found = True
             else:
@@ -301,8 +333,12 @@ def main():
 
         with open(csv_filename, 'r') as bank_file:
 
-            bank_reader = csv.reader(bank_file)
+
+            dialect = csv.Sniffer().sniff(bank_file.read(1024))
+            bank_file.seek(0)
+            bank_reader = csv.reader(bank_file, dialect)
             # We hardcode the fields, so want to ignore the first line if it's just field names
+            for x in range(0, options.skip_lines): bank_reader.next()
             if not options.no_header: bank_reader.next()
 
             # If output file not specified, use input filename with '.ledger' extension
@@ -311,12 +347,12 @@ def main():
             else:
                 output = output_file
 
-            for row in bank_reader:
-                entry = Entry(row, config, options.account)
+            for i, row in enumerate(bank_reader):
+                entry = Entry(row, config, options.account, dialect)
                 account = get_account(entry)
                 payee = get_payee(entry)
 
-                print >>output, entry.journal_entry(account, payee, options.output_tags)
+                print >>output, entry.journal_entry(account, payee, i+1)
 
             if not output_file:
                 output.close()

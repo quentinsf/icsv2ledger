@@ -40,7 +40,16 @@ class Entry:
 
         # Get the date and convert it into a ledger formatted date.
         self.date = row[config.getint(csv_account, 'date') - 1]
-        self.date = datetime.strptime(self.date, config.get(csv_account, 'date_format')).strftime("%Y/%m/%d")
+        if config.has_option(csv_account, 'csv_date_format'):
+            csv_date_format = config.get(csv_account, 'csv_date_format')
+        else:
+            csv_date_format = ""
+        if config.has_option(csv_account, 'ledger_date_format'):
+            ledger_date_format = config.get(csv_account, 'ledger_date_format')
+        else:
+            ledger_date_format = ""
+        if ledger_date_format != csv_date_format:
+            self.date = datetime.strptime(self.date, csv_date_format).strftime(ledger_date_format)
 
         self.desc = row[config.getint(csv_account, 'desc') - 1]
         self.desc.strip()
@@ -219,7 +228,7 @@ def main():
         print "Config file " + options.config + " does not contain section " + options.account
         return
 
-    for o in ['account', 'date', 'date_format', 'desc', 'credit', 'debit', 'accounts_map', 'payees_map']:
+    for o in ['account', 'date', 'desc', 'credit', 'debit', 'accounts_map', 'payees_map']:
         if not config.has_option(options.account, o):
             print "Config file " + options.config + " section " + options.account + " does not contain option " + o
             return

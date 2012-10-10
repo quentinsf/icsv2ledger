@@ -15,7 +15,7 @@ The 'i' stands for _interactive_. Here's what it's designed to do:
 
 * It stores the history in a mapping file, for converting transaction descriptions onto account/payee names. You can also edit this by hand. It can load this in future as the basis of its guesses.  It uses simple string-matching by default, but if you put a '/' at the start and end of a string it will instead be interpreted as a regular expression.
 
-* The account names used in the autocompletion are read both from the mapping file and, optionally, from a Ledger file or files. (It runs 'ledger --format %(account) reg" to get the names')
+* The account names used in the autocompletion are read both from the mapping file and, optionally, from a Ledger file or files. (It runs `ledger accounts` to get the names)
 
 To use icsv2ledger you need to create a config file.
 The default config file is called .icsv2ledger in the current directory.
@@ -58,7 +58,7 @@ Now for each account you need to specify the following:
   is 'Expenses:Unknown'. _Optional_
 * `currency` is the the currency of amounts. Default is none. _Optional_
 * `append_currency` will append the currency after the amount. Default
-  is "False", so prepend, that is before amount. _Optional_
+  is `False`, so prepend, that is before amount. _Optional_
 * `date` is the column in the CSV file which records the transaction date.
   The first column in the CSV file is numbered 1. _Mandatory_
 * `csv_date_format` describes the format of the date in the CSV file.

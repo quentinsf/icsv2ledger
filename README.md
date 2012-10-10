@@ -78,6 +78,8 @@ Now for each account you need to specify the following:
   file. The default is `1` to skip the CSV header line. _Optional_
 * `cleared_character` is character to mark a transaction as cleared.
   Ledger possible value are `*` or `!` or ` `. Default is `*`. _Optional_
+* `ledger_file` is ledger file where to get the list of already defined
+  accounts and payees. _Optional_
 
 To run, use the following command
 

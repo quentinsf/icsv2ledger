@@ -198,8 +198,8 @@ def main():
     parser.add_option("-o", "--output-file", dest="output_file",
                       help="Ledger file for output (default file1.ledger etc)",
                       default=None)
-    parser.add_option("-r", "--read-file", dest="ledger_file",
-                      help="Read accounts from ledger file")
+    parser.add_option("-l", "--ledger-file", dest="ledger_file",
+                      help="Read payees/accounts from ledger file")
     parser.add_option("-q", "--quiet", dest="quiet",
                       help="Don't prompt if account can be deduced, just use it",
                       default=False, action="store_true")
@@ -236,6 +236,7 @@ def main():
     options.accounts_map_file = config.get(options.account, 'accounts_map')
     options.payees_map_file = config.get(options.account, 'payees_map')
     options.skip_lines = config.getint(options.account, 'skip_lines')
+    options.ledger_file = config.get(options.account, 'ledger_file')
 
     # We prime the list of accounts and payees by running Ledger on the specified file
     accounts = set([])

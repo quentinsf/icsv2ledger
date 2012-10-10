@@ -192,8 +192,8 @@ def main():
     from optparse import OptionParser
     usage = "%prog [options] file1.csv [file2.csv...]"
     parser = OptionParser(usage=usage)
-    parser.add_option("-c", "--config", dest="config",
-                      help="Configuation file for icsv2ledger",
+    parser.add_option("-c", "--config", dest="config_filename",
+                      help="Configuration file for icsv2ledger",
                       default=".icsv2ledger")
     parser.add_option("-o", "--output-file", dest="output_file",
                       help="Ledger file for output (default file1.ledger etc)",
@@ -218,11 +218,20 @@ def main():
             'skip_lines': '1',
             'cleared_character': '*'})
 
-    if os.path.exists(options.config):
-        config.read(options.config)
+    config_file_locs = (
+        os.path.join('.', options.config_filename),
+        os.path.join(os.path.expanduser("~"), options.config_filename))
+    for loc in config_file_locs:
+        if os.path.exists(loc):
+            config_file = loc
+            break
     else:
-        print "Can not find config file: " + options.config
-        return
+        print "Can't find config file. Put it in one of these locations:"
+        for loc in config_file_locs:
+            print loc
+        sys.exit(1)
+
+    config.read(config_file)
 
     if not config.has_section(options.account):
         print "Config file " + options.config + " does not contain section " + options.account

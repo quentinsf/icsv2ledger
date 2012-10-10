@@ -17,8 +17,10 @@ The 'i' stands for _interactive_. Here's what it's designed to do:
 
 * The account names used in the autocompletion are read both from the mapping file and, optionally, from a Ledger file or files. (It runs 'ledger --format %(account) reg" to get the names')
 
-To use icsv2ledger you need to create a config file.
-The default config file is called .icsv2ledger in the current directory.
+To use icsv2ledger you need to create a configuration file.
+Configuration file will be searched first in current directory, then in
+home directory. Default configuration filename is '.icsv2ledger'.
+
 The following is an example configuration file.
 
 <pre>

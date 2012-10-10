@@ -211,10 +211,12 @@ def main():
                       default=True, action="store_false")
     (options, args) = parser.parse_args()
 
+    # Because of python bug http://bugs.python.org/issue974019,
+    # ConfigParser boolean default value must be a string
     config = ConfigParser.ConfigParser(
         defaults={
             'default_expense': 'Expenses:Unknown',
-            'append_currency': False,
+            'append_currency': 'False',
             'skip_lines': '1',
             'cleared_character': '*'})
 

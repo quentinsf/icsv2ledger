@@ -236,12 +236,12 @@ def main():
     config.read(config_file)
 
     if not config.has_section(options.account):
-        print "Config file " + options.config + " does not contain section " + options.account
+        print "Config file " + options.config_filename + " does not contain section " + options.account
         return
 
     for o in ['account', 'date', 'desc', 'credit', 'debit', 'accounts_map', 'payees_map']:
         if not config.has_option(options.account, o):
-            print "Config file " + options.config + " section " + options.account + " does not contain option " + o
+            print "Config file " + options.config_filename + " section " + options.account + " does not contain option " + o
             return
 
     options.accounts_map_file = config.get(options.account, 'accounts_map')

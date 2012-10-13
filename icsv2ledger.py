@@ -23,7 +23,7 @@ class Entry:
     You will probably need to tweak the __init__ method depending on how your bank represents things.
     """
 
-    def __init__(self, row, config, csv_account):
+    def __init__(self, row, csv, config, csv_account):
         """
         Parameters:
 
@@ -74,7 +74,7 @@ class Entry:
 
         # Ironically, we have to recreate the CSV line to keep it for reference
         # I don't think the otherwise excellent CSV library has a way to get the original line.
-        self.csv = ",".join(row)
+        self.csv = csv
 
         # We also record this - in future we may use it to avoid duplication
         self.md5sum = hashlib.md5(self.csv).hexdigest()
@@ -356,15 +356,12 @@ def main():
             sys.stdout.write("\n".join(ledger_lines))
 
     def process_csv_lines(csv_lines):
-
-        bank_reader = csv.reader(csv_lines)
-        # Skip header lines if needed
-        for x in range(0, options.skip_lines):
-            bank_reader.next()
+        dialect = csv.Sniffer().sniff("\n".join(csv_lines[options.skip_lines:options.skip_lines+3]))
+        bank_reader = csv.reader(csv_lines[options.skip_lines:], dialect)
 
         ledger_lines = []
-        for row in bank_reader:
-            entry = Entry(row, config, options.account)
+        for i,row in enumerate(bank_reader):
+            entry = Entry(row, csv_lines[options.skip_lines+i], config, options.account)
             payee, account = get_payee_and_account(entry)
             ledger_lines.append(entry.journal_entry(payee, account))
 

@@ -5,7 +5,7 @@ This is a command-line utility to convert CSV files of transactions, such as you
 
 The 'i' stands for _interactive_. Here's what it's designed to do:
 
-* For each .csv file you give it, it creates a .ledger file output (unless you specify an output file, in which case all output goes into the one file).
+* For each CSV input you give it, it creates a Ledger output.
 
 * As it runs through the entries in the CSV file, it tries to guess which Ledger account and Ledger payee they should be posted against, based on your historical decisions.
 
@@ -15,7 +15,44 @@ The 'i' stands for _interactive_. Here's what it's designed to do:
 
 * It stores the history in a mapping file, for converting transaction descriptions onto account/payee names. You can also edit this by hand. It can load this in future as the basis of its guesses.  It uses simple string-matching by default, but if you put a '/' at the start and end of a string it will instead be interpreted as a regular expression.
 
-* The account names used in the autocompletion are read both from the mapping file and, optionally, from a Ledger file or files. (It runs `ledger accounts` to get the names)
+* The account names used in the autocompletion are read both from the mapping file and, optionally, from a Ledger file or files. (It runs `ledger accounts` to get the names).
+
+
+Command line options
+--------------------
+
+Usage:
+
+    icsv2ledger.py [options] [input.csv [output.ledger]]
+
+Arguments:
+
+	input.csv             Filename or stdin. CSV format.
+    output.ledger         Filename or stdout. Ledger format.
+
+Options:
+
+    -h, --help            show this help message and exit
+    -c CONFIG_FILENAME, --config=CONFIG_FILENAME
+                          Configuration file for icsv2ledger
+    -l LEDGER_FILE, --ledger-file=LEDGER_FILE
+                          Read payees/accounts from ledger file
+    -q, --quiet           Don't prompt if account can be deduced, just use it
+    -a ACCOUNT, --account=ACCOUNT
+                          The Ledger account of this statement
+                          (Assets:Bank:Current)
+    --no-output-tags      Don't output the MD5SUM and CSV tags in the ledger
+                          transaction
+
+Example:
+
+    ./icsv2ledger -a SAV file.csv
+
+The above command will use the [SAV] section of the config file to process the CSV file.
+
+
+Configuration file
+------------------
 
 To use icsv2ledger you need to create a configuration file.
 Configuration file will be searched first in current directory, then in
@@ -23,32 +60,30 @@ home directory. Default configuration filename is '.icsv2ledger'.
 
 The following is an example configuration file.
 
-<pre>
-[SAV]
-account=Assets:Bank:Savings Account
-currency=AUD
-date=1
-csv_date_format=%d-%b-%y
-ledger_date_format=%Y/%m/%d
-desc=6
-credit=2
-debit=-1
-accounts_map=mappings.SAV
-payees_map=payees.SAV
-
-[CHQ]
-account=Assets:Bank:Cheque Account
-currency=AUD
-date=1
-csv_date_format=%d/%m/%Y
-ledger_date_format=%Y/%m/%d
-desc=2
-credit=3
-debit=4
-accounts_map=mappings.CHQ
-payees_map=payees.CHQ
-skip_lines=0
-</pre>
+    [SAV]
+    account=Assets:Bank:Savings Account
+    currency=AUD
+    date=1
+    csv_date_format=%d-%b-%y
+    ledger_date_format=%Y/%m/%d
+    desc=6
+    credit=2
+    debit=-1
+    accounts_map=mappings.SAV
+    payees_map=payees.SAV
+     
+    [CHQ]
+    account=Assets:Bank:Cheque Account
+    currency=AUD
+    date=1
+    csv_date_format=%d/%m/%Y
+    ledger_date_format=%Y/%m/%d
+    desc=2
+    credit=3
+    debit=4
+    accounts_map=mappings.CHQ
+    payees_map=payees.CHQ
+    skip_lines=0
 
 The configuration file contains one section per bank account you wish to import.
 In the above example there are two bank accounts: SAV and CHQ.
@@ -83,24 +118,19 @@ Now for each account you need to specify the following:
 * `ledger_file` is ledger file where to get the list of already defined
   accounts and payees. _Optional_
 
-To run, use the following command
 
-<pre>
-./icsv2ledger -a SAV file.csv
-</pre>
-
-The above command will use the [SAV] section of the config file to process the csv file.
+Mapping file
+------------
 
 A typical mapping file might look like:
 
-<pre>
-  "/SAFEWAY.*/","Expenses:Food"
-  "/ITUNES.*/","Expenses:Entertainment"
-  "THE WRESTLERS INN","Expenses:Food"
-  "MY COMPANY 1234", "Income:Salary"
-</pre>
+    "/SAFEWAY.*/","Expenses:Food"
+    "/ITUNES.*/","Expenses:Entertainment"
+    "THE WRESTLERS INN","Expenses:Food"
+    "MY COMPANY 1234", "Income:Salary"
 
 Later matching entries overwrite earlier ones.
+
 
 Feedback/contributions most welcome.
 

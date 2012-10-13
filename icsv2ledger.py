@@ -190,14 +190,11 @@ def prompt_for_value(prompt, values, default):
 def main():
 
     from optparse import OptionParser
-    usage = "%prog [options] file1.csv [file2.csv...]"
+    usage = "%prog [options] [input.csv [output.ledger]]"
     parser = OptionParser(usage=usage)
     parser.add_option("-c", "--config", dest="config_filename",
                       help="Configuration file for icsv2ledger",
                       default=".icsv2ledger")
-    parser.add_option("-o", "--output-file", dest="output_file",
-                      help="Ledger file for output (default file1.ledger etc)",
-                      default=None)
     parser.add_option("-l", "--ledger-file", dest="ledger_file",
                       help="Read payees/accounts from ledger file")
     parser.add_option("-q", "--quiet", dest="quiet",
@@ -318,40 +315,72 @@ def main():
 
         return value
 
-    def process_csv_file(csv_filename, output_file):
+    def reset_stdin():
+        """ If file input is stdin, then stdin must be reset to be able
+        to use readline. How to reset stdin in explained in below URLs.
+        http://stackoverflow.com/questions/8034595/
+        http://stackoverflow.com/questions/6833526/
+        """
+        if os.name == 'posix':
+            sys.stdin = open('/dev/tty')
+        elif os.name == 'nt':
+            sys.stdin = open('CON', 'r')
+        else:
+            sys.stderr.write('Unrecognized operating system.\n')
+            sys.exit(1)
 
-        with open(csv_filename, 'r') as bank_file:
+    def process_input_output(input_filename, output_filename):
+        """ Read CSV lines either from filename or stdin.
+        Process them.
+        Write Ledger lines either to filename or stdout.
+        """
+        if input_filename:
+            in_file = open(input_filename, 'r')
+            csv_lines = in_file.readlines()
+            in_file.close()
+        else:  # stdin
+            csv_lines = sys.stdin.readlines()
+            reset_stdin()
 
-            bank_reader = csv.reader(bank_file)
-            # We hardcode the fields, so want to ignore the first line if it's just field names
-            for x in range(0, options.skip_lines): bank_reader.next()
+        ledger_lines = process_csv_lines(csv_lines)
 
-            # If output file not specified, use input filename with '.ledger' extension
-            if not output_file:
-                output = open(os.path.splitext(csv_filename)[0] + ".ledger", "w")
-            else:
-                output = output_file
+        if output_filename:
+            out_file = open(output_filename, 'w')
+            out_file.write("\n".join(ledger_lines))
+            out_file.close()
+        else:  # stdout
+            sys.stdout.write("\n".join(ledger_lines))
 
-            for row in bank_reader:
-                entry = Entry(row, config, options.account)
-                account = get_account(entry)
-                payee = get_payee(entry)
+    def process_csv_lines(csv_lines):
 
-                print >>output, entry.journal_entry(account, payee, options.output_tags)
+        bank_reader = csv.reader(csv_lines)
+        # Skip header lines if needed
+        for x in range(0, options.skip_lines):
+            bank_reader.next()
 
-            if not output_file:
-                output.close()
+        ledger_lines = []
+        for row in bank_reader:
+            entry = Entry(row, config, options.account)
+            account = get_account(entry)
+            payee = get_payee(entry)
+            ledger_lines.append(entry.journal_entry(account, payee, options.output_tags))
 
-    if options.output_file:
-        output_file = open(options.output_file, "w")
-    else:
-        output_file = None
+        return ledger_lines
 
-    for csv_file in args:
-        process_csv_file(csv_file, output_file)
+    # Parse positional arguments
+    if len(args) > 2:
+        parser.error("Incorrect number of arguments")
+    elif len(args) == 2:
+        input_filename = args[0] if not args[0] == '-' else None
+        output_filename = args[1] if not args[1] == '-' else None
+    elif len(args) == 1:
+        input_filename = args[0] if not args[0] == '-' else None
+        output_filename = None
+    elif len(args) == 0:
+        input_filename = None
+        output_filename = None
 
-    if output_file:
-        output_file.close()
+    process_input_output(input_filename, output_filename)
 
 if __name__ == "__main__":
     main()

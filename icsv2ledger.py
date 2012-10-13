@@ -11,7 +11,6 @@ import os
 import hashlib
 import re
 import subprocess
-import types
 import readline
 import rlcompleter
 import ConfigParser
@@ -98,7 +97,7 @@ class Entry:
         """
         return "%s %-40s %s" % (self.date, self.desc, self.credit if self.credit else "-" + self.debit)
 
-    def journal_entry(self, account, payee, output_tags):
+    def journal_entry(self, payee, account, output_tags):
         """
         Return a formatted journal entry recording this Entry against the specified Ledger account/
         """
@@ -139,19 +138,24 @@ def from_ledger(ledger_file, command):
     return items
 
 
-def read_mappings(map_file):
+def read_mapping_file(map_file):
     """
-    Mappings are simply a CSV file with two columns.
+    Mappings are simply a CSV file with three columns.
     The first is a string to be matched against an entry description.
-    The second is the account against which such entries should be posted.
-    If the match string begins and ends with '/' it is taken to be a regular expression.
+    The second is the payee against which such entries should be posted.
+    The third is the account against which such entries should be posted.
+
+    If the match string begins and ends with '/' it is taken to be a
+    regular expression.
     """
     mappings  = []
-    with open(map_file, "r") as mf:
-        map_reader = csv.reader(mf)
+    with open(map_file, "r") as f:
+        map_reader = csv.reader(f)
         for row in map_reader:
             if len(row) > 1:
-                pattern, account = row[0].strip(), row[1].strip()
+                pattern = row[0].strip()
+                payee = row[1].strip()
+                account = row[2].strip()
                 if pattern.startswith('/') and pattern.endswith('/'):
                     try:
                         pattern = re.compile(pattern[1:-1])
@@ -159,8 +163,15 @@ def read_mappings(map_file):
                         sys.stderr.write("Invalid regex '%s' in '%s': %s\n" %
                                          (pattern, map_file, e))
                         sys.exit(1)
-                mappings.append((pattern, account))
+                mappings.append((pattern, payee, account))
     return mappings
+
+
+def append_mapping_file(map_file, desc, payee, account):
+    if map_file:
+        with open(map_file, 'ab') as f:
+            writer = csv.writer(f)
+            writer.writerow([desc, payee, account])
 
 
 def prompt_for_value(prompt, values, default):
@@ -236,85 +247,75 @@ def main():
         print "Config file " + options.config_filename + " does not contain section " + options.account
         return
 
-    for o in ['account', 'date', 'desc', 'credit', 'debit', 'accounts_map', 'payees_map']:
+    for o in ['account', 'date', 'desc', 'credit', 'debit', 'mapping_file']:
         if not config.has_option(options.account, o):
             print "Config file " + options.config_filename + " section " + options.account + " does not contain option " + o
             return
 
-    options.accounts_map_file = config.get(options.account, 'accounts_map')
-    options.payees_map_file = config.get(options.account, 'payees_map')
+    options.mapping_file = config.get(options.account, 'mapping_file')
     options.skip_lines = config.getint(options.account, 'skip_lines')
     if not options.ledger_file and config.has_option(options.account, 'ledger_file'):
         options.ledger_file = config.get(options.account, 'ledger_file')
 
-    # We prime the list of accounts and payees by running Ledger on the specified file
-    accounts = set([])
-    payees = set([])
+    # Get list of accounts and payees from Ledger specified file
+    possible_accounts = set([])
+    possible_payees = set([])
     if options.ledger_file:
-        accounts = accounts_from_ledger(options.ledger_file)
-        payees = payees_from_ledger(options.ledger_file)
+        possible_accounts = accounts_from_ledger(options.ledger_file)
+        possible_payees = payees_from_ledger(options.ledger_file)
 
-    # We read from and include accounts from any given mapping file
+    # Read mappings
     mappings = []
-    if options.accounts_map_file:
-        mappings = read_mappings(options.accounts_map_file)
-        for m in mappings:
-            accounts.add(m[1])
+    if options.mapping_file:
+        mappings = read_mapping_file(options.mapping_file)
 
-    payee_mappings = []
-    if options.payees_map_file:
-        payee_mappings = read_mappings(options.payees_map_file)
-        for m in payee_mappings:
-            payees.add(m[1])
+    # Add to possible values the ones from mappings
+    for m in mappings:
+        possible_payees.add(m[1])
+        possible_accounts.add(m[2])
 
-    def get_account(entry):
-        return get_account_or_payee(
-            entry, "Account", accounts,
-            mappings, options.accounts_map_file,
-            config.get(options.account, 'default_expense'))
-
-    def get_payee(entry):
-        return get_account_or_payee(entry, "Payee", payees, payee_mappings, options.payees_map_file, entry.desc)
-
-    def get_account_or_payee(entry, prompt, possible_values, mappings, map_file, default_suggestion):
-        sugg = default_suggestion
+    def get_payee_and_account(entry):
+        payee = entry.desc
+        account = config.get(options.account, 'default_expense')
         found = False
+        # Try to match entry desc with mappings patterns
         for m in mappings:
             pattern = m[0]
-            if type(pattern) is types.StringType:
-                pattern = pattern.strip()
+            if isinstance(pattern, str):
                 if entry.desc == pattern:
-                    sugg = m[1]
-                    found = True
+                    payee, account = m[1], m[2]
+                    found = True  # do not break here, later mapping must win
             else:
                 # If the pattern isn't a string it's a regex
                 if m[0].match(entry.desc):
-                    sugg = m[1]
+                    payee, account = m[1], m[2]
                     found = True
 
+        modified = False
         if options.quiet and found:
-            value = sugg
+            pass
         else:
-            if not entry.printed_header:
-                entry.printed_header = True
-                print "\n" + entry.prompt()
+            print '\n' + entry.prompt()
+            value = prompt_for_value('Payee', possible_payees, payee)
+            if value:
+                modified = value != payee
+                payee = value
+            value = prompt_for_value('Account', possible_accounts, account)
+            if value:
+                modified = value != account
+                account = value
 
-            value  = prompt_for_value(prompt, possible_values, sugg)
-            if not value:
-                value = sugg
-
-        if not found or (value != sugg):
+        if not found or (found and modified):
             # Add new or changed mapping to mappings and append to file
-            mappings.append((entry.desc, value))
+            mappings.append((entry.desc, payee, account))
+            append_mapping_file(options.mapping_file,
+                                entry.desc, payee, account)
 
-            if map_file:
-                with open(map_file, "a") as values_map_file:
-                    values_map_file.write("\"%s\",\"%s\"\n" % (entry.desc, value) )
+            # Add new possible_values to possible values lists
+            possible_payees.add(payee)
+            possible_accounts.add(account)
 
-            # Add new possible_values to possible_values list
-            possible_values.add(value)
-
-        return value
+        return (payee, account)
 
     def reset_stdin():
         """ If file input is stdin, then stdin must be reset to be able
@@ -362,9 +363,8 @@ def main():
         ledger_lines = []
         for row in bank_reader:
             entry = Entry(row, config, options.account)
-            account = get_account(entry)
-            payee = get_payee(entry)
-            ledger_lines.append(entry.journal_entry(account, payee, options.output_tags))
+            payee, account = get_payee_and_account(entry)
+            ledger_lines.append(entry.journal_entry(payee, account, options.output_tags))
 
         return ledger_lines
 

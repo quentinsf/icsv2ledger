@@ -13,9 +13,9 @@ The 'i' stands for _interactive_. Here's what it's designed to do:
 
 * When you are entering an account/payee name, you get _auto-completion_ if you press the Tab key.  You don't have to match the _start_ of the name, so on my system, typing 'foo[tab]' inserts 'Expenses:Food'.
 
-* It stores the history in a mapping file, for converting transaction descriptions onto account/payee names. You can also edit this by hand. It can load this in future as the basis of its guesses.  It uses simple string-matching by default, but if you put a '/' at the start and end of a string it will instead be interpreted as a regular expression.
+* It stores the history in a mapping file, for converting transaction descriptions onto payee/account names. You can also edit this by hand. It can load this in future as the basis of its guesses.  It uses simple string-matching by default, but if you put a '/' at the start and end of a string it will instead be interpreted as a regular expression.
 
-* The account names used in the autocompletion are read both from the mapping file and, optionally, from a Ledger file or files. (It runs `ledger accounts` to get the names).
+* The payee/account names used in the autocompletion are read both from the mapping file and, optionally, from a Ledger file or files. (It runs `ledger payees` and `ledger accounts` to get the names).
 
 
 Command line options
@@ -27,7 +27,7 @@ Usage:
 
 Arguments:
 
-	input.csv             Filename or stdin. CSV format.
+    input.csv             Filename or stdin. CSV format.
     output.ledger         Filename or stdout. Ledger format.
 
 Options:
@@ -69,8 +69,7 @@ The following is an example configuration file.
     desc=6
     credit=2
     debit=-1
-    accounts_map=mappings.SAV
-    payees_map=payees.SAV
+    mapping_file=mappings.SAV
      
     [CHQ]
     account=Assets:Bank:Cheque Account
@@ -81,8 +80,7 @@ The following is an example configuration file.
     desc=2
     credit=3
     debit=4
-    accounts_map=mappings.CHQ
-    payees_map=payees.CHQ
+    mapping_file=mappings.CHQ
     skip_lines=0
 
 The configuration file contains one section per bank account you wish to import.
@@ -109,8 +107,8 @@ Now for each account you need to specify the following:
 * `debit` is the column which contains debits to the account.
   If your bank represents debits as negative numbers in the credit
   column, than just set `debit` to be "-1" and icsv2ledger will do the right thing. _Mandatory_
-* `accounts_map` is the file which holds the mapping between the description and the account name to use. _Mandatory_
-* `payees_map` is the file which holds the mapping between the description and the payee to use. _Mandatory_
+* `mapping_file` is the file which holds the mapping between the
+  description and the payee/account names to use. _Mandatory_
 * `skip_lines` is the number of lines to skip from the beginning of the CSV
   file. The default is `1` to skip the CSV header line. _Optional_
 * `cleared_character` is character to mark a transaction as cleared.
@@ -124,10 +122,11 @@ Mapping file
 
 A typical mapping file might look like:
 
-    "/SAFEWAY.*/","Expenses:Food"
-    "/ITUNES.*/","Expenses:Entertainment"
-    "THE WRESTLERS INN","Expenses:Food"
-    "MY COMPANY 1234", "Income:Salary"
+    /SAFEWAY/,Safeway,Expenses:Food
+    /ITUNES.*/,iTunes,Expenses:Entertainment
+    THE WRESTLERS INN,"The ""Wrestlers"" Inn",Expenses:Food
+    /MACY'S/,"Macy's, Inc.",Expenses:Food
+    MY COMPANY 1234,My Company,Income:Salary
 
 Later matching entries overwrite earlier ones.
 

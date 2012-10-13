@@ -247,7 +247,8 @@ def main():
     options.accounts_map_file = config.get(options.account, 'accounts_map')
     options.payees_map_file = config.get(options.account, 'payees_map')
     options.skip_lines = config.getint(options.account, 'skip_lines')
-    options.ledger_file = config.get(options.account, 'ledger_file')
+    if not options.ledger_file and config.has_option(options.account, 'ledger_file'):
+        options.ledger_file = config.get(options.account, 'ledger_file')
 
     # We prime the list of accounts and payees by running Ledger on the specified file
     accounts = set([])

@@ -72,9 +72,7 @@ class Entry:
         else:
             self.transaction_template = ""
 
-        # Ironically, we have to recreate the CSV line to keep it for reference
-        # I don't think the otherwise excellent CSV library has a way to get the original line.
-        self.csv = csv
+        self.csv = csv.strip()
 
         # We also record this - in future we may use it to avoid duplication
         self.md5sum = hashlib.md5(self.csv).hexdigest()

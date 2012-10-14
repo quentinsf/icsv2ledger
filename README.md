@@ -92,8 +92,6 @@ Now for each account you need to specify the following:
 * `default_expense` is the default ledger account for expense. Default
   is 'Expenses:Unknown'. _Optional_
 * `currency` is the the currency of amounts. Default is none. _Optional_
-* `append_currency` will append the currency after the amount. Default
-  is `False`, so prepend, that is before amount. _Optional_
 * `date` is the column in the CSV file which records the transaction date.
   The first column in the CSV file is numbered 1. _Mandatory_
 * `csv_date_format` describes the format of the date in the CSV file.
@@ -115,6 +113,18 @@ Now for each account you need to specify the following:
   Ledger possible value are `*` or `!` or ` `. Default is `*`. _Optional_
 * `ledger_file` is ledger file where to get the list of already defined
   accounts and payees. _Optional_
+* `transaction_template` path to a file containing the template to use when
+  generating ledger transactions. _Optional_<br>
+  Details on how to format the template are found in the [Format Specification Mini-Language](http://docs.python.org/library/string.html#formatspec).
+  The built-in default template is as follows:
+
+<pre>
+{date} {cleared_character} {payee}
+    ; MD5Sum: {md5sum}
+    ; CSV: {csv}
+    {debit_account:<60}    {debit_currency} {debit}
+    {credit_account:<60}    {credit_currency} {credit}
+</pre>
 
 
 Mapping file

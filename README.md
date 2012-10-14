@@ -111,16 +111,9 @@ Now for each account you need to specify the following:
   Ledger possible value are `*` or `!` or ` `. Default is `*`. _Optional_
 * `ledger_file` is ledger file where to get the list of already defined
   accounts and payees. _Optional_
-* `transaction_template` path to a file containing the template to use when
-  generating ledger transactions. _Optional_<br>
-  Details on how to format the template are found in the [Format Specification Mini-Language](http://docs.python.org/library/string.html#formatspec).
-  The built-in default template is as follows:
-
-    {date} {cleared_character} {payee}
-        ; MD5Sum: {md5sum}
-        ; CSV: {csv}
-        {debit_account:<60}    {debit_currency} {debit}
-        {credit_account:<60}    {credit_currency} {credit}
+* `transaction_template` path to a file containing the template to use
+  when generating ledger transactions. See section
+  [Transaction template file](#template). _Optional_<br>
 
 
 Mapping file
@@ -135,6 +128,21 @@ A typical mapping file might look like:
     MY COMPANY 1234,My Company,Income:Salary
 
 Later matching entries overwrite earlier ones.
+
+
+Transaction template file <a id="template"/>
+-------------------------
+
+The built-in default template is as follows:
+
+	{date} {cleared_character} {payee}
+		; MD5Sum: {md5sum}
+		; CSV: {csv}
+		{debit_account:<60}	   {debit_currency} {debit}
+		{credit_account:<60}	{credit_currency} {credit}
+		  
+Details on how to format the template are found in the
+[Format Specification Mini-Language](http://docs.python.org/library/string.html#formatspec).
 
 
 Feedback/contributions most welcome.

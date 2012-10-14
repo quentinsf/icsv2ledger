@@ -9,13 +9,15 @@ The 'i' stands for __interactive__. Here's what it's designed to do:
 
 * As it runs through the entries in the CSV file, it tries to guess which Ledger account and Ledger payee they should be posted against, based on your historical decisions.
 
-* It __shows you__ which account or payee it's going to use, giving you the opportunity to change it.  If it got it right, just hit return.
+* It __shows you__ which account, payee, and additional tags it's going to use, giving you the opportunity to change it.  If it got it right, just hit return.
 
 * When you are entering an account/payee name, you get __auto-completion__ if you press the Tab key.  You don't have to match the _start_ of the name, so on my system, typing 'foo[tab]' inserts 'Expenses:Food'.
 
+* When you are entering a tag, you get __auto-completion__ if you press the Tab key.  If you would like to remove a Tag from the list of tags just prefix the Tag with a minus (-). When you are done with the tags just hit return.
+
 * It stores the history in a mapping file, for converting transaction descriptions onto payee/account names. You can also edit this by hand. It can load this in future as the basis of its guesses.  It uses simple string-matching by default, but if you put a '/' at the start and end of a string it will instead be interpreted as a regular expression.
 
-* The payee/account names used in the autocompletion are read both from the mapping file and, optionally, from a Ledger file or files. It runs `ledger payees` and `ledger accounts` to get the names.
+* The payee/account names used in the autocompletion are read both from the mapping file and, optionally, from a Ledger file or files. It runs `ledger payees` and `ledger accounts` to get the names.  The tags are only read from the mapping file.
 
 
 Synopsis

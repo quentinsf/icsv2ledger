@@ -86,7 +86,7 @@ class Entry:
         """
         return "%s %-40s %s" % (self.date, self.desc, self.credit if self.credit else "-" + self.debit)
 
-    def journal_entry(self, payee, account):
+    def journal_entry(self, transaction_index, payee, account):
         """
         Return a formatted journal entry recording this Entry against the specified Ledger account/
         """
@@ -102,6 +102,7 @@ class Entry:
             'date': self.date,
             'cleared_character': self.cleared_character,
             'payee': payee,
+            'transaction_index': transaction_index,
 
             'debit_account': account,
             'debit_currency': self.currency if self.debit else "",
@@ -361,7 +362,7 @@ def main():
         for i,row in enumerate(bank_reader):
             entry = Entry(row, csv_lines[options.skip_lines+i], config, options.account)
             payee, account = get_payee_and_account(entry)
-            ledger_lines.append(entry.journal_entry(payee, account))
+            ledger_lines.append(entry.journal_entry(i+1, payee, account))
 
         return ledger_lines
 

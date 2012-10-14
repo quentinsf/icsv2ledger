@@ -88,7 +88,7 @@ class Entry:
         """
         return "%s %-40s %s" % (self.date, self.desc, self.credit if self.credit else "-" + self.debit)
 
-    def journal_entry(self, account, payee):
+    def journal_entry(self, payee, account):
         """
         Return a formatted journal entry recording this Entry against the specified Ledger account/
         """
@@ -101,21 +101,20 @@ class Entry:
         """
         template = self.transaction_template if self.transaction_template else default_template
         format_data = {
-                'date': self.date,
-                'cleared_character': self.cleared_character,
-                'payee': payee,
+            'date': self.date,
+            'cleared_character': self.cleared_character,
+            'payee': payee,
 
-                'debit_account': account,
-                'debit_currency': self.currency if self.debit else "",
-                'debit': self.debit,
+            'debit_account': account,
+            'debit_currency': self.currency if self.debit else "",
+            'debit': self.debit,
 
-                'credit_account': self.csv_account,
-                'credit_currency': self.currency if self.credit else "",
-                'credit': self.credit,
+            'credit_account': self.csv_account,
+            'credit_currency': self.currency if self.credit else "",
+            'credit': self.credit,
 
-                'md5sum': self.md5sum,
-                'csv': self.csv,
-        }
+            'md5sum': self.md5sum,
+            'csv': self.csv }
         return template.format(**format_data)
 
 
@@ -367,7 +366,7 @@ def main():
         for row in bank_reader:
             entry = Entry(row, config, options.account)
             payee, account = get_payee_and_account(entry)
-            ledger_lines.append(entry.journal_entry(account, payee))
+            ledger_lines.append(entry.journal_entry(payee, account))
 
         return ledger_lines
 

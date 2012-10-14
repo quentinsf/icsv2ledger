@@ -41,8 +41,6 @@ Options:
     -a ACCOUNT, --account=ACCOUNT
                           The Ledger account of this statement
                           (Assets:Bank:Current)
-    --no-output-tags      Don't output the MD5SUM and CSV tags in the ledger
-                          transaction
 
 Example:
 
@@ -118,13 +116,11 @@ Now for each account you need to specify the following:
   Details on how to format the template are found in the [Format Specification Mini-Language](http://docs.python.org/library/string.html#formatspec).
   The built-in default template is as follows:
 
-<pre>
-{date} {cleared_character} {payee}
-    ; MD5Sum: {md5sum}
-    ; CSV: {csv}
-    {debit_account:<60}    {debit_currency} {debit}
-    {credit_account:<60}    {credit_currency} {credit}
-</pre>
+    {date} {cleared_character} {payee}
+        ; MD5Sum: {md5sum}
+        ; CSV: {csv}
+        {debit_account:<60}    {debit_currency} {debit}
+        {credit_account:<60}    {credit_currency} {credit}
 
 
 Mapping file

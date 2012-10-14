@@ -3,34 +3,36 @@ icsv2ledger
 
 This is a command-line utility to convert CSV files of transactions, such as you might download from an online banking service, into the format used by John Wiegley's excellent [Ledger](http://ledger-cli.org) system.
 
-The 'i' stands for _interactive_. Here's what it's designed to do:
+The 'i' stands for __interactive__. Here's what it's designed to do:
 
 * For each CSV input you give it, it creates a Ledger output.
 
 * As it runs through the entries in the CSV file, it tries to guess which Ledger account and Ledger payee they should be posted against, based on your historical decisions.
 
-* It _shows you_ which account or payee it's going to use, giving you the opportunity to change it.  If it got it right, just hit return.
+* It __shows you__ which account or payee it's going to use, giving you the opportunity to change it.  If it got it right, just hit return.
 
-* When you are entering an account/payee name, you get _auto-completion_ if you press the Tab key.  You don't have to match the _start_ of the name, so on my system, typing 'foo[tab]' inserts 'Expenses:Food'.
+* When you are entering an account/payee name, you get __auto-completion__ if you press the Tab key.  You don't have to match the _start_ of the name, so on my system, typing 'foo[tab]' inserts 'Expenses:Food'.
 
 * It stores the history in a mapping file, for converting transaction descriptions onto payee/account names. You can also edit this by hand. It can load this in future as the basis of its guesses.  It uses simple string-matching by default, but if you put a '/' at the start and end of a string it will instead be interpreted as a regular expression.
 
-* The payee/account names used in the autocompletion are read both from the mapping file and, optionally, from a Ledger file or files. (It runs `ledger payees` and `ledger accounts` to get the names).
+* The payee/account names used in the autocompletion are read both from the mapping file and, optionally, from a Ledger file or files. It runs `ledger payees` and `ledger accounts` to get the names.
 
 
-Command line options
---------------------
-
-Usage:
+Synopsis
+--------
 
     icsv2ledger.py [options] [input.csv [output.ledger]]
 
-Arguments:
+
+Arguments
+---------
 
     input.csv             Filename or stdin. CSV format.
     output.ledger         Filename or stdout. Ledger format.
 
-Options:
+
+Options
+-------
 
     -h, --help            show this help message and exit
     -c CONFIG_FILENAME, --config=CONFIG_FILENAME
@@ -42,7 +44,9 @@ Options:
                           The Ledger account of this statement
                           (Assets:Bank:Current)
 
-Example:
+
+Example
+-------
 
     ./icsv2ledger -a SAV file.csv
 
@@ -104,7 +108,8 @@ Now for each account you need to specify the following:
   If your bank represents debits as negative numbers in the credit
   column, than just set `debit` to be "-1" and icsv2ledger will do the right thing. _Mandatory_
 * `mapping_file` is the file which holds the mapping between the
-  description and the payee/account names to use. _Mandatory_
+  description and the payee/account names to use. See section
+  [Mapping file](#mapping) _Mandatory_
 * `skip_lines` is the number of lines to skip from the beginning of the CSV
   file. The default is `1` to skip the CSV header line. _Optional_
 * `cleared_character` is character to mark a transaction as cleared.
@@ -123,7 +128,7 @@ Now for each account you need to specify the following:
         {credit_account:<60}    {credit_currency} {credit}
 
 
-Mapping file
+Mapping file <a id="mapping"/>
 ------------
 
 A typical mapping file might look like:
@@ -137,7 +142,20 @@ A typical mapping file might look like:
 Later matching entries overwrite earlier ones.
 
 
+Contributing
+------------
+
 Feedback/contributions most welcome.
+
+
+Author
+------
 
 Quentin Stafford-Fraser
 http://qandr.org/quentin
+
+
+See also
+--------
+
+[ledger](http://ledger-cli.org)

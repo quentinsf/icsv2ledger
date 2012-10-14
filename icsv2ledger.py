@@ -20,20 +20,20 @@ from datetime import datetime
 class Entry:
     """
     This represents one entry in the CSV file.
-    You will probably need to tweak the __init__ method depending on how your bank represents things.
     """
 
     def __init__(self, row, csv, config, csv_account):
         """
         Parameters:
 
-         row is the list of fields read from a line of the CSV file
-            This method should put them into the appropriate fields of the object.
+        row is the list of fields read from one line of the CSV file.
 
-         config is the ConfigParser instance
+        csv is the string of the original line from CSV file.
 
-         csv_account is the name of the Ledger account for which this is a statement
-             e.g. "Assets:Bank:Checking"
+        config is the ConfigParser instance
+
+        csv_account is the name of the Ledger account for which this is
+        a statement e.g. "Assets:Bank:Checking"
 
         """
 
@@ -48,7 +48,9 @@ class Entry:
         else:
             ledger_date_format = ""
         if ledger_date_format != csv_date_format:
-            self.date = datetime.strptime(self.date, csv_date_format).strftime(ledger_date_format)
+            self.date = (datetime
+                         .strptime(self.date, csv_date_format)
+                         .strftime(ledger_date_format))
 
         self.desc = row[config.getint(csv_account, 'desc') - 1].strip()
 
@@ -67,7 +69,7 @@ class Entry:
         self.cleared_character = config.get(csv_account, 'cleared_character')
 
         if config.has_option(csv_account, 'transaction_template'):
-            with open (config.get(csv_account, 'transaction_template'), 'r') as template_file:
+            with open(config.get(csv_account, 'transaction_template'), 'r') as template_file:
                 self.transaction_template = template_file.read().rstrip()
         else:
             self.transaction_template = ""
@@ -81,14 +83,18 @@ class Entry:
 
     def prompt(self):
         """
-        We print a summary of the record on the screen, and allow you to choose the destination account.
-        What should go in that summary?
+        We print a summary of the record on the screen, and allow you to
+        choose the destination account.
         """
-        return "%s %-40s %s" % (self.date, self.desc, self.credit if self.credit else "-" + self.debit)
+        return "%s %-40s %s" % (self.date,
+                                self.desc,
+                                self.credit
+                                if self.credit else "-" + self.debit)
 
     def journal_entry(self, payee, account):
         """
-        Return a formatted journal entry recording this Entry against the specified Ledger account/
+        Return a formatted journal entry recording this Entry against
+        the specified Ledger account
         """
         default_template = """\
 {date} {cleared_character} {payee}
@@ -97,7 +103,8 @@ class Entry:
     {debit_account:<60}    {debit_currency} {debit}
     {credit_account:<60}    {credit_currency} {credit}
         """
-        template = self.transaction_template if self.transaction_template else default_template
+        template = (self.transaction_template
+                    if self.transaction_template else default_template)
         format_data = {
             'date': self.date,
             'cleared_character': self.cleared_character,
@@ -112,7 +119,7 @@ class Entry:
             'credit': self.credit,
 
             'md5sum': self.md5sum,
-            'csv': self.csv }
+            'csv': self.csv}
         return template.format(**format_data)
 
 
@@ -152,7 +159,7 @@ def read_mapping_file(map_file):
     If the match string begins and ends with '/' it is taken to be a
     regular expression.
     """
-    mappings  = []
+    mappings = []
     with open(map_file, "r") as f:
         map_reader = csv.reader(f)
         for row in map_reader:
@@ -207,17 +214,21 @@ def main():
     from optparse import OptionParser
     usage = "%prog [options] [input.csv [output.ledger]]"
     parser = OptionParser(usage=usage)
-    parser.add_option("-c", "--config", dest="config_filename",
-                      help="Configuration file for icsv2ledger",
-                      default=".icsv2ledger")
-    parser.add_option("-l", "--ledger-file", dest="ledger_file",
-                      help="Read payees/accounts from ledger file")
-    parser.add_option("-q", "--quiet", dest="quiet",
-                      help="Don't prompt if account can be deduced, just use it",
-                      default=False, action="store_true")
-    parser.add_option("-a", "--account", dest="account",
-                      help="The Ledger account of this statement (Assets:Bank:Current)",
-                      default="Assets:Bank:Current")
+    parser.add_option(
+        "-c", "--config", dest="config_filename",
+        help="Configuration file for icsv2ledger",
+        default=".icsv2ledger")
+    parser.add_option(
+        "-l", "--ledger-file", dest="ledger_file",
+        help="Read payees/accounts from ledger file")
+    parser.add_option(
+        "-q", "--quiet", dest="quiet",
+        help="Don't prompt if account can be deduced, just use it",
+        default=False, action="store_true")
+    parser.add_option(
+        "-a", "--account", dest="account",
+        help="The Ledger account of this statement (Assets:Bank:Current)",
+        default="Assets:Bank:Current")
     (options, args) = parser.parse_args()
 
     # Because of python bug http://bugs.python.org/issue974019,
@@ -244,17 +255,20 @@ def main():
     config.read(config_file)
 
     if not config.has_section(options.account):
-        print "Config file " + options.config_filename + " does not contain section " + options.account
+        print ("Config file " + options.config_filename +
+               " does not contain section " + options.account)
         return
 
     for o in ['account', 'date', 'desc', 'credit', 'debit', 'mapping_file']:
         if not config.has_option(options.account, o):
-            print "Config file " + options.config_filename + " section " + options.account + " does not contain option " + o
+            print ("Config file " + options.config_filename + " section "
+                   + options.account + " does not contain option " + o)
             return
 
     options.mapping_file = config.get(options.account, 'mapping_file')
     options.skip_lines = config.getint(options.account, 'skip_lines')
-    if not options.ledger_file and config.has_option(options.account, 'ledger_file'):
+    if (not options.ledger_file and
+            config.has_option(options.account, 'ledger_file')):
         options.ledger_file = config.get(options.account, 'ledger_file')
 
     # Get list of accounts and payees from Ledger specified file
@@ -354,12 +368,14 @@ def main():
             sys.stdout.write("\n".join(ledger_lines))
 
     def process_csv_lines(csv_lines):
-        dialect = csv.Sniffer().sniff("\n".join(csv_lines[options.skip_lines:options.skip_lines+3]))
+        dialect = csv.Sniffer().sniff(
+            "\n".join(csv_lines[options.skip_lines:options.skip_lines + 3]))
         bank_reader = csv.reader(csv_lines[options.skip_lines:], dialect)
 
         ledger_lines = []
-        for i,row in enumerate(bank_reader):
-            entry = Entry(row, csv_lines[options.skip_lines+i], config, options.account)
+        for i, row in enumerate(bank_reader):
+            entry = Entry(row, csv_lines[options.skip_lines + i],
+                          config, options.account)
             payee, account = get_payee_and_account(entry)
             ledger_lines.append(entry.journal_entry(payee, account))
 

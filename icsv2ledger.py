@@ -50,8 +50,7 @@ class Entry:
         if ledger_date_format != csv_date_format:
             self.date = datetime.strptime(self.date, csv_date_format).strftime(ledger_date_format)
 
-        self.desc = row[config.getint(csv_account, 'desc') - 1]
-        self.desc.strip()
+        self.desc = row[config.getint(csv_account, 'desc') - 1].strip()
 
         if config.getint(csv_account, 'credit') < 0:
             self.credit = ""

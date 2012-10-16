@@ -75,6 +75,11 @@ The following is an example configuration file.
     credit=2
     debit=-1
     mapping_file=mappings.SAV
+    
+    [SAV_addon]
+    beneficiary=3
+    purpose=4
+    
      
     [CHQ]
     account=Assets:Bank:Cheque Account
@@ -90,6 +95,14 @@ The following is an example configuration file.
 
 The configuration file contains one section per bank account you wish to import.
 In the above example there are two bank accounts: SAV and CHQ.
+
+The `SAV_addon` section passes the addtional data from the configured CSV fields
+to the ledger transaction template for the SAV account. Given the above
+configuration your own transaction template could include the additional
+data as tags using:
+
+     ; purpose: {addon_purpose}
+     ; beneficiary: {addon_beneficiary}
 
 Now for each account you need to specify the following:
 

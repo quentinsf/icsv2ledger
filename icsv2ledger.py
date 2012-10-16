@@ -37,6 +37,13 @@ class Entry:
 
         """
 
+
+        self.addons = {}
+        if config.has_section(csv_account + "_addons"):
+            for item in config.items(csv_account + "_addons"):
+                if item in config.defaults().items(): continue
+                self.addons['addon_'+item[0]] = row[int(item[1])-1]
+
         # Get the date and convert it into a ledger formatted date.
         self.date = row[config.getint(csv_account, 'date') - 1]
         if config.has_option(csv_account, 'csv_date_format'):
@@ -122,7 +129,7 @@ class Entry:
             'tags': '\n    ; '.join(tags),
             'md5sum': self.md5sum,
             'csv': self.csv}
-        return template.format(**format_data)
+        return template.format(**dict(format_data.items() + self.addons.items()))
 
 
 def payees_from_ledger(ledger_file):

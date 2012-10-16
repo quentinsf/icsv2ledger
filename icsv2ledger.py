@@ -91,7 +91,7 @@ class Entry:
                                 self.credit
                                 if self.credit else "-" + self.debit)
 
-    def journal_entry(self, transaction_index, payee, account):
+    def journal_entry(self, transaction_index, payee, account, tags):
         """
         Return a formatted journal entry recording this Entry against
         the specified Ledger account
@@ -119,6 +119,7 @@ class Entry:
             'credit_currency': self.currency if self.credit else "",
             'credit': self.credit,
 
+            'tags': '\n    ; '.join(tags),
             'md5sum': self.md5sum,
             'csv': self.csv}
         return template.format(**format_data)
@@ -168,6 +169,7 @@ def read_mapping_file(map_file):
                 pattern = row[0].strip()
                 payee = row[1].strip()
                 account = row[2].strip()
+                tags = row[3:]
                 if pattern.startswith('/') and pattern.endswith('/'):
                     try:
                         pattern = re.compile(pattern[1:-1])
@@ -175,15 +177,37 @@ def read_mapping_file(map_file):
                         sys.stderr.write("Invalid regex '%s' in '%s': %s\n" %
                                          (pattern, map_file, e))
                         sys.exit(1)
-                mappings.append((pattern, payee, account))
+                mappings.append((pattern, payee, account, tags))
     return mappings
 
 
-def append_mapping_file(map_file, desc, payee, account):
+def append_mapping_file(map_file, desc, payee, account, tags):
     if map_file:
         with open(map_file, 'ab') as f:
             writer = csv.writer(f)
-            writer.writerow([desc, payee, account])
+            writer.writerow([desc, payee, account] + tags)
+
+
+def tagify(value):
+    if value.find(':') < 0 :
+      value = ":{0}:".format(value)
+    return value
+
+
+def prompt_for_tags(prompt, values, default):
+    tags = list(default)
+    value = prompt_for_value(prompt, values, ", ".join(tags))
+    while value:
+        if value[0] == '-':
+            value = tagify(value[1:])
+            if value in tags:
+                tags.remove(value)
+        else:
+            value = tagify(value)
+            if not value in tags:
+                tags.append(value)
+        value = prompt_for_value(prompt, values, ", ".join(tags))
+    return tags
 
 
 def prompt_for_value(prompt, values, default):
@@ -230,6 +254,10 @@ def main():
         "-a", "--account", dest="account",
         help="The Ledger account of this statement (Assets:Bank:Current)",
         default="Assets:Bank:Current")
+    parser.add_option(
+        "-t", "--tags", dest="tags",
+        help="Prompt for transaction tags",
+        default=False, action="store_true")
     (options, args) = parser.parse_args()
 
     # Because of python bug http://bugs.python.org/issue974019,
@@ -275,6 +303,7 @@ def main():
     # Get list of accounts and payees from Ledger specified file
     possible_accounts = set([])
     possible_payees = set([])
+    possible_tags = set([])
     if options.ledger_file:
         possible_accounts = accounts_from_ledger(options.ledger_file)
         possible_payees = payees_from_ledger(options.ledger_file)
@@ -288,22 +317,24 @@ def main():
     for m in mappings:
         possible_payees.add(m[1])
         possible_accounts.add(m[2])
+        possible_tags.update(set(m[3]))
 
     def get_payee_and_account(entry):
         payee = entry.desc
         account = config.get(options.account, 'default_expense')
+        tags = []
         found = False
         # Try to match entry desc with mappings patterns
         for m in mappings:
             pattern = m[0]
             if isinstance(pattern, str):
                 if entry.desc == pattern:
-                    payee, account = m[1], m[2]
+                    payee, account, tags = m[1], m[2], m[3]
                     found = True  # do not break here, later mapping must win
             else:
                 # If the pattern isn't a string it's a regex
                 if m[0].match(entry.desc):
-                    payee, account = m[1], m[2]
+                    payee, account, tags = m[1], m[2], m[3]
                     found = True
 
         modified = False
@@ -319,18 +350,24 @@ def main():
             if value:
                 modified = value != account
                 account = value
+            if options.tags:
+                print "End adding tags with an empty tag. Remove tag with -TAGNAME."
+                value = prompt_for_tags('Tag', possible_tags, tags)
+                if value:
+                    modified = value != tags
+                    tags = value
 
         if not found or (found and modified):
             # Add new or changed mapping to mappings and append to file
             mappings.append((entry.desc, payee, account))
             append_mapping_file(options.mapping_file,
-                                entry.desc, payee, account)
+                                entry.desc, payee, account, tags)
 
             # Add new possible_values to possible values lists
             possible_payees.add(payee)
             possible_accounts.add(account)
 
-        return (payee, account)
+        return (payee, account, tags)
 
     def reset_stdin():
         """ If file input is stdin, then stdin must be reset to be able
@@ -374,11 +411,11 @@ def main():
         bank_reader = csv.reader(csv_lines[options.skip_lines:], dialect)
 
         ledger_lines = []
-        for i, row in enumerate(bank_reader):
-            entry = Entry(row, csv_lines[options.skip_lines + i],
+        for i,row in enumerate(bank_reader):
+            entry = Entry(row, csv_lines[options.skip_lines+i],
                           config, options.account)
-            payee, account = get_payee_and_account(entry)
-            ledger_lines.append(entry.journal_entry(i+1, payee, account))
+            payee, account, tags = get_payee_and_account(entry)
+            ledger_lines.append(entry.journal_entry(i+1, payee, account, tags))
 
         return ledger_lines
 

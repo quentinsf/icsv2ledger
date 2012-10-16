@@ -188,6 +188,28 @@ def append_mapping_file(map_file, desc, payee, account, tags):
             writer.writerow([desc, payee, account] + tags)
 
 
+def tagify(value):
+    if value.find(':') < 0 :
+      value = ":{0}:".format(value)
+    return value
+
+
+def prompt_for_tags(prompt, values, default):
+    tags = list(default)
+    value = prompt_for_value(prompt, values, ", ".join(tags))
+    while value:
+        if value[0] == '-':
+            value = tagify(value[1:])
+            if value in tags:
+                tags.remove(value)
+        else:
+            value = tagify(value)
+            if not value in tags:
+                tags.append(value)
+        value = prompt_for_value(prompt, values, ", ".join(tags))
+    return tags
+
+
 def prompt_for_value(prompt, values, default):
 
     def completer(text, state):
@@ -209,13 +231,7 @@ def prompt_for_value(prompt, values, default):
     else:
         readline.parse_and_bind("tab: complete")
 
-    try:
-        value = raw_input(prompt + ' [%s] > ' % default)
-    except EOFError:
-        print
-        value = None
-
-    return value
+    return raw_input(prompt + ' [%s] > ' % default)
 
 
 def main():
@@ -238,6 +254,10 @@ def main():
         "-a", "--account", dest="account",
         help="The Ledger account of this statement (Assets:Bank:Current)",
         default="Assets:Bank:Current")
+    parser.add_option(
+        "-t", "--tags", dest="tags",
+        help="Prompt for transaction tags",
+        default=False, action="store_true")
     (options, args) = parser.parse_args()
 
     # Because of python bug http://bugs.python.org/issue974019,
@@ -297,7 +317,7 @@ def main():
     for m in mappings:
         possible_payees.add(m[1])
         possible_accounts.add(m[2])
-        possible_tags |= set(m[3])
+        possible_tags.update(set(m[3]))
 
     def get_payee_and_account(entry):
         payee = entry.desc
@@ -330,22 +350,12 @@ def main():
             if value:
                 modified = value != account
                 account = value
-            print "Remove tag with -TAGNAME. End adding tags with an empty tag."
-            value = prompt_for_value('Tag', possible_tags, ",".join(tags))
-            while value and value != None:
-                if value[0] == '-':
-                    value = value[1:]
-                    if value.find(':') < 0:
-                        value = ":{0}:".format(value)
-                    if value in tags:
-                        tags.remove(value)
-                else:
-                    if value.find(':') < 0:
-                        value = ":{0}:".format(value)
-                    modified = not value in tags
-                    if modified:
-                        tags.append(value)
-                value = prompt_for_value('Tag', possible_tags, ",".join(tags))
+            if options.tags:
+                print "End adding tags with an empty tag. Remove tag with -TAGNAME."
+                value = prompt_for_tags('Tag', possible_tags, tags)
+                if value:
+                    modified = value != tags
+                    tags = value
 
         if not found or (found and modified):
             # Add new or changed mapping to mappings and append to file

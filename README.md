@@ -45,6 +45,7 @@ Options
     -a ACCOUNT, --account=ACCOUNT
                           The Ledger account of this statement
                           (Assets:Bank:Current)
+    -t, --tags            Prompt for transaction tags
 
 
 Example

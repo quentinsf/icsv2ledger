@@ -174,8 +174,7 @@ Feedback/contributions most welcome.
 Author
 ------
 
-Quentin Stafford-Fraser
-http://qandr.org/quentin
+icsv2ledger was originally created by [Quentin Stafford-Fraser](http://qandr.org/quentin) but includes valuable contributions from many others, including Peter Ross, Alexis Hildebrandt, Thierry Daucourt and Eric Entzel. 
 
 
 See also

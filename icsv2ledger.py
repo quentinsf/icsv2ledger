@@ -358,7 +358,6 @@ def main():
                 modified = value != account
                 account = value
             if options.tags:
-                print "End adding tags with an empty tag. Remove tag with -TAGNAME."
                 value = prompt_for_tags('Tag', possible_tags, tags)
                 if value:
                     modified = value != tags

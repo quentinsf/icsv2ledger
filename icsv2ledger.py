@@ -199,7 +199,7 @@ def append_mapping_file(map_file, desc, payee, account, tags):
 
 
 def tagify(value):
-    if value.find(':') < 0 :
+    if value.find(':') < 0 and value[0] != '[' and value[-1] != ']':
       value = ":{0}:".format(value)
     return value
 

@@ -46,6 +46,7 @@ Options
                           The Ledger account of this statement
                           (Assets:Bank:Current)
     -t, --tags            Prompt for transaction tags
+    -C, --clear           Clear the screen prior asking for a new transaction mapping
 
 
 Example

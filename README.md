@@ -118,7 +118,8 @@ Now for each account you need to specify the following:
   entries.  By default the same date format from the CSV file is used.
   See the [python documentation](http://docs.python.org/library/datetime.html#strftime-strptime-behavior) for the various format codes supported in this expression. _Optional_
 * `desc` is the column containing the transaction description as supplied by the bank.
-  This is the column that will be used as the input for determing which payee and account to use by the auto-completion. _Mandatory_
+  This is the column that will be used as the input for determing which payee and account to use by the auto-completion.
+  It is possible to provide a comma separated list of csv column indices that should be concatenated to in order to form a unique description.  _Mandatory_
 * `credit` is the column which contains credits to the account. _Mandatory_
 * `debit` is the column which contains debits to the account.
   If your bank represents debits as negative numbers in the credit

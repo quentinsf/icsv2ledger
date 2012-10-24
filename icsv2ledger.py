@@ -59,7 +59,10 @@ class Entry:
                          .strptime(self.date, csv_date_format)
                          .strftime(ledger_date_format))
 
-        self.desc = row[config.getint(csv_account, 'desc') - 1].strip()
+        desc = []
+        for index in re.compile(',\s*').split(config.get(csv_account, 'desc')):
+            desc.append(row[int(index) - 1].strip())
+        self.desc = ' '.join(desc).strip()
 
         if config.getint(csv_account, 'credit') < 0:
             self.credit = ""

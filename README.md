@@ -165,10 +165,22 @@ The built-in default template is as follows:
 Details on how to format the template are found in the
 [Format Specification Mini-Language](http://docs.python.org/library/string.html#formatspec).
 
+
 Contributing
 ------------
 
 Feedback/contributions most welcome.
+
+
+Known Issues
+------------
+
+On Mac OS X when CSV is passed via stdin to icsv2ledger you may not see any
+prompts offering defaults and asking for your input. This is due to an inferior
+readline library (libedit) installed by default on Mac OS X.
+Install a proper readline library and your good to go.
+
+    % sudo easy_install readline
 
 
 Author

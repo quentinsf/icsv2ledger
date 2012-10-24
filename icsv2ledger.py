@@ -265,6 +265,10 @@ def main():
         "-t", "--tags", dest="tags",
         help="Prompt for transaction tags",
         default=False, action="store_true")
+    parser.add_option(
+        "-C", "--clear", dest="clear",
+        help="Clear screen for every transaction",
+        default=False, action="store_true")
     (options, args) = parser.parse_args()
 
     # Because of python bug http://bugs.python.org/issue974019,
@@ -348,6 +352,8 @@ def main():
         if options.quiet and found:
             pass
         else:
+            if options.clear:
+                print "\033[2J\033[;H"
             print '\n' + entry.prompt()
             value = prompt_for_value('Payee', possible_payees, payee)
             if value:

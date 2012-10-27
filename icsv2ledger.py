@@ -22,13 +22,13 @@ class Entry:
     This represents one entry in the CSV file.
     """
 
-    def __init__(self, row, csv, config, csv_account):
+    def __init__(self, row, original_csv, config, csv_account):
         """
         Parameters:
 
         row is the list of fields read from one line of the CSV file.
 
-        csv is the string of the original line from CSV file.
+        original_csv is the string of the original line from CSV file.
 
         config is the ConfigParser instance
 
@@ -84,10 +84,10 @@ class Entry:
         else:
             self.transaction_template = ""
 
-        self.csv = csv.strip()
+        self.original_csv = original_csv.strip()
 
         # We also record this - in future we may use it to avoid duplication
-        self.md5sum = hashlib.md5(self.csv).hexdigest()
+        self.md5sum = hashlib.md5(self.original_csv).hexdigest()
 
         self.printed_header = False
 
@@ -131,7 +131,7 @@ class Entry:
 
             'tags': '\n    ; '.join(tags),
             'md5sum': self.md5sum,
-            'csv': self.csv}
+            'csv': self.original_csv}
         return template.format(
             **dict(format_data.items() + self.addons.items()))
 

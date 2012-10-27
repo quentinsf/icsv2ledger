@@ -22,13 +22,13 @@ class Entry:
     This represents one entry in the CSV file.
     """
 
-    def __init__(self, row, csv, config, csv_account):
+    def __init__(self, row, original_csv, config, csv_account):
         """
         Parameters:
 
         row is the list of fields read from one line of the CSV file.
 
-        csv is the string of the original line from CSV file.
+        original_csv is the string of the original line from CSV file.
 
         config is the ConfigParser instance
 
@@ -37,12 +37,12 @@ class Entry:
 
         """
 
-
         self.addons = {}
         if config.has_section(csv_account + "_addons"):
             for item in config.items(csv_account + "_addons"):
-                if item in config.defaults().items(): continue
-                self.addons['addon_'+item[0]] = row[int(item[1])-1]
+                if item in config.defaults().items():
+                    continue
+                self.addons['addon_' + item[0]] = row[int(item[1]) - 1]
 
         # Get the date and convert it into a ledger formatted date.
         self.date = row[config.getint(csv_account, 'date') - 1]
@@ -84,10 +84,10 @@ class Entry:
         else:
             self.transaction_template = ""
 
-        self.csv = csv.strip()
+        self.original_csv = original_csv.strip()
 
         # We also record this - in future we may use it to avoid duplication
-        self.md5sum = hashlib.md5(self.csv).hexdigest()
+        self.md5sum = hashlib.md5(self.original_csv).hexdigest()
 
         self.printed_header = False
 
@@ -131,8 +131,9 @@ class Entry:
 
             'tags': '\n    ; '.join(tags),
             'md5sum': self.md5sum,
-            'csv': self.csv}
-        return template.format(**dict(format_data.items() + self.addons.items()))
+            'csv': self.original_csv}
+        return template.format(
+            **dict(format_data.items() + self.addons.items()))
 
 
 def payees_from_ledger(ledger_file):
@@ -200,7 +201,7 @@ def append_mapping_file(map_file, desc, payee, account, tags):
 
 def tagify(value):
     if value.find(':') < 0 and value[0] != '[' and value[-1] != ']':
-      value = ":{0}:".format(value)
+        value = ":{0}:".format(value)
     return value
 
 
@@ -426,11 +427,12 @@ def main():
         bank_reader = csv.reader(csv_lines[options.skip_lines:], dialect)
 
         ledger_lines = []
-        for i,row in enumerate(bank_reader):
-            entry = Entry(row, csv_lines[options.skip_lines+i],
+        for i, row in enumerate(bank_reader):
+            entry = Entry(row, csv_lines[options.skip_lines + i],
                           config, options.account)
             payee, account, tags = get_payee_and_account(entry)
-            ledger_lines.append(entry.journal_entry(i+1, payee, account, tags))
+            ledger_lines.append(
+                entry.journal_entry(i + 1, payee, account, tags))
 
         return ledger_lines
 

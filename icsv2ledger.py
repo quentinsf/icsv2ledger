@@ -317,7 +317,7 @@ class Entry:
 
         if options.template_file:
             with open(options.template_file, 'r') as f:
-                self.transaction_template = f.read().rstrip()
+                self.transaction_template = f.read()
         else:
             self.transaction_template = ""
 

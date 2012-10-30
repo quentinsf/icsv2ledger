@@ -206,6 +206,8 @@ The file used will be first found in that order:
 2. `.icsv2ledgerrc-mapping` in current directory,
 3. `.icsv2ledgerrc-mapping` in home directory.
 
+Warning: the file must exists so that mapping are added to file.
+
 **`--quiet, -q`**
 
 will not prompt if account can be deduced from existing mapping. Default

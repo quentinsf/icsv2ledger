@@ -530,16 +530,16 @@ def main():
             print '\n' + entry.prompt()
             value = prompt_for_value('Payee', possible_payees, payee)
             if value:
-                modified = value != payee
+                modified = modified if modified else value != payee
                 payee = value
             value = prompt_for_value('Account', possible_accounts, account)
             if value:
-                modified = value != account
+                modified = modified if modified else value != account
                 account = value
             if options.tags:
                 value = prompt_for_tags('Tag', possible_tags, tags)
                 if value:
-                    modified = value != tags
+                    modified = modified if modified else value != tags
                     tags = value
 
         if not found or (found and modified):

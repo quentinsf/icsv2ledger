@@ -331,10 +331,10 @@ class Entry:
         We print a summary of the record on the screen, and allow you to
         choose the destination account.
         """
-        return "%s %-40s %s" % (self.date,
-                                self.desc,
-                                self.credit
-                                if self.credit else "-" + self.debit)
+        return '{0} {1:<40} {2}'.format(
+            self.date,
+            self.desc,
+            self.credit if self.credit else "-" + self.debit)
 
     def journal_entry(self, transaction_index, payee, account, tags):
         """
@@ -477,7 +477,7 @@ def prompt_for_value(prompt, values, default):
     else:
         readline.parse_and_bind("tab: complete")
 
-    return raw_input(prompt + ' [%s] > ' % default)
+    return raw_input('{0} [{1}] > '.format(prompt, default))
 
 
 def main():

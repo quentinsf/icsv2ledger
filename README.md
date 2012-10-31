@@ -136,6 +136,8 @@ The file used will be first found in that order:
 is the CSV file column which contains _credit_ amounts. The first column
 in the CSV file is numbered 1. Default is `4`.
 
+See also documentation of `--debit` option for negating amounts.
+
 **`--csv-date-format STR`**
 
 describes the date format in the CSV file. See the
@@ -155,9 +157,12 @@ is the CSV file column which contains the transaction date. Default is
 
 is the CSV file column which contains _debit_ amounts. Default is `3`.
 
-If your bank represents debits as negative numbers in the credit column,
-than just set `debit` to be `-1` and icsv2ledger will do the right
-thing.
+If your bank write all amounts in same column, credits as positive
+amounts and debits as negative amounts, then set `debit` to `0`.
+
+If your bank write debits as negative number and you want to negate the
+amount, then use `--debit=-3`. It will negate amounts in column 3 and
+use them as debits amounts.
 
 **`--default-expense STR`**
 

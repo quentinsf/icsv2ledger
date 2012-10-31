@@ -280,17 +280,18 @@ class Entry:
     This represents one entry in the CSV file.
     """
 
-    def __init__(self, row, original_csv, options):
+    def __init__(self, fields, raw_csv, options):
         """Parameters:
-        row: list of fields read from one line of the CSV file.
-        original_csv: original line from CSV file.
+        fields: list of fields read from one line of the CSV file
+        raw_csv: unprocessed line from CSV file
         options: from CLI args and config file
         """
 
-        self.addons = dict((k, row[v - 1]) for k, v in options.addons.items())
+        self.addons = dict((k, fields[v - 1])
+                           for k, v in options.addons.items())
 
         # Get the date and convert it into a ledger formatted date.
-        self.date = row[options.date - 1]
+        self.date = fields[options.date - 1]
         if options.ledger_date_format != options.csv_date_format:
             self.date = (datetime
                          .strptime(self.date, options.csv_date_format)
@@ -298,18 +299,18 @@ class Entry:
 
         desc = []
         for index in re.compile(',\s*').split(options.desc):
-            desc.append(row[int(index) - 1].strip())
+            desc.append(fields[int(index) - 1].strip())
         self.desc = ' '.join(desc).strip()
 
         if options.credit < 0:
             self.credit = ""
         else:
-            self.credit = row[options.credit - 1]
+            self.credit = fields[options.credit - 1]
 
         if options.debit < 0:
             self.debit = ""
         else:
-            self.debit = row[options.debit - 1]
+            self.debit = fields[options.debit - 1]
 
         self.csv_account = options.account
         self.currency = options.currency
@@ -321,10 +322,10 @@ class Entry:
         else:
             self.transaction_template = ""
 
-        self.original_csv = original_csv.strip()
+        self.raw_csv = raw_csv.strip()
 
         # We also record this - in future we may use it to avoid duplication
-        self.md5sum = hashlib.md5(self.original_csv).hexdigest()
+        self.md5sum = hashlib.md5(self.raw_csv).hexdigest()
 
     def prompt(self):
         """
@@ -366,7 +367,7 @@ class Entry:
 
             'tags': '\n    ; '.join(tags),
             'md5sum': self.md5sum,
-            'csv': self.original_csv}
+            'csv': self.raw_csv}
         return template.format(
             **dict(format_data.items() + self.addons.items()))
 

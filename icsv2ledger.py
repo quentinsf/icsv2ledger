@@ -314,14 +314,18 @@ class Entry:
         self.desc = ' '.join(desc).strip()
 
         if options.credit < 0:
-            self.credit = ""
-        else:
+            self.credit = -fields[options.credit - 1]
+        elif options.credit > 0:
             self.credit = fields[options.credit - 1]
+        else:
+            self.credit = ''
 
         if options.debit < 0:
-            self.debit = ""
-        else:
+            self.debit = -fields[options.debit - 1]
+        elif options.debit > 0:
             self.debit = fields[options.debit - 1]
+        else:
+            self.debit = ''
 
         self.csv_account = options.account
         self.currency = options.currency

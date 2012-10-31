@@ -78,6 +78,14 @@ FILE_DEFAULTS = dotdict({
         os.path.join('.', '.icsv2ledgerrc-template'),
         os.path.join(os.path.expanduser('~'), '.icsv2ledgerrc-template')]})
 
+DEFAULT_TEMPLATE = """\
+{date} {cleared_character} {payee}
+    ; MD5Sum: {md5sum}
+    ; CSV: {csv}
+    {debit_account:<60}    {debit_currency} {debit}
+    {credit_account:<60}    {credit_currency} {credit}
+"""
+
 
 def find_first_file(arg_file, alternatives):
     """Because of http://stackoverflow.com/questions/12397681,
@@ -342,15 +350,8 @@ class Entry:
         Return a formatted journal entry recording this Entry against
         the specified Ledger account
         """
-        default_template = """\
-{date} {cleared_character} {payee}
-    ; MD5Sum: {md5sum}
-    ; CSV: {csv}
-    {debit_account:<60}    {debit_currency} {debit}
-    {credit_account:<60}    {credit_currency} {credit}
-        """
         template = (self.transaction_template
-                    if self.transaction_template else default_template)
+                    if self.transaction_template else DEFAULT_TEMPLATE)
         format_data = {
             'date': self.date,
             'cleared_character': self.cleared_character,

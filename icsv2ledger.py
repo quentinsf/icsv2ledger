@@ -283,6 +283,12 @@ def parse_args_and_config_file():
     args.template_file = find_first_file(
         args.template_file, FILE_DEFAULTS.template_file)
 
+    if args.ledger_date_format and not args.csv_date_format:
+        print('csv_date_format must be set'
+              ' if ledger_date_format is defined.',
+              file=sys.stderr)
+        sys.exit(1)
+
     return args
 
 
@@ -303,10 +309,11 @@ class Entry:
 
         # Get the date and convert it into a ledger formatted date.
         self.date = fields[options.date - 1]
-        if options.ledger_date_format != options.csv_date_format:
-            self.date = (datetime
-                         .strptime(self.date, options.csv_date_format)
-                         .strftime(options.ledger_date_format))
+        if options.ledger_date_format:
+            if options.ledger_date_format != options.csv_date_format:
+                self.date = (datetime
+                             .strptime(self.date, options.csv_date_format)
+                             .strftime(options.ledger_date_format))
 
         desc = []
         for index in re.compile(',\s*').split(options.desc):

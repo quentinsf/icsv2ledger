@@ -138,7 +138,9 @@ in the CSV file is numbered 1. Default is `4`.
 
 **`--csv-date-format STR`**
 
-describes the date format in the CSV file. See the
+describes the date format in the CSV file. 
+
+See the
 [python documentation](http://docs.python.org/library/datetime.html#strftime-strptime-behavior)
 for the various format codes supported in this expression.
 
@@ -179,8 +181,12 @@ mapping.
 
 **`--ledger-date-format STR`**
 
-describes the date format to be used when creating ledger entries.
-Default is same date format as `--csv-date-format`. See the
+describes the date format to be used when creating ledger entries. If
+`--ledger-date-format` is defined, then `--csv-date-format` must also be
+defined to be able to convert dates. If `--ledger-date-format` is not
+defined, then the date from CSV file is reused.
+
+See the
 [python documentation](http://docs.python.org/library/datetime.html#strftime-strptime-behavior)
 for the various format codes supported in this expression.
 

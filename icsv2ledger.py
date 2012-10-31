@@ -298,8 +298,11 @@ class Entry:
         options: from CLI args and config file
         """
 
-        self.addons = dict((k, fields[v - 1])
-                           for k, v in options.addons.items())
+        if 'addons' in options:
+            self.addons = dict((k, fields[v - 1])
+                               for k, v in options.addons.items())
+        else:
+            self.addons = dict()
 
         # Get the date and convert it into a ledger formatted date.
         self.date = fields[options.date - 1]

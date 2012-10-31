@@ -5,6 +5,8 @@
 #
 # Requires Python >= 2.6 and Ledger >= 3.0
 
+from __future__ import print_function
+
 import csv
 import sys
 import os
@@ -23,8 +25,9 @@ try:
     from argparse import HelpFormatter
 except ImportError:
     # for previous version, argparse package is to be installed
-    sys.stderr.write("argparse module missing: "
-                     "Please run 'sudo easy_install argparse'\n")
+    print('argparse module missing: '
+          'Please run `sudo easy_install argparse`',
+          file=sys.stderr)
     sys.exit(1)
 
 
@@ -143,9 +146,9 @@ def parse_args_and_config_file():
         config = ConfigParser.RawConfigParser(DEFAULTS)
         config.read(args.config_file)
         if not config.has_section(args.account):
-            sys.stderr.write(
-                'Config file {0} does not contain section {1}\n'
-                .format(args.config_file, args.account))
+            print('Config file {0} does not contain section {1}'
+                  .format(args.config_file, args.account),
+                  file=sys.stderr)
             sys.exit(1)
         defaults = dict(config.items(args.account))
         defaults['addons'] = {}
@@ -422,8 +425,9 @@ def read_mapping_file(map_file):
                     try:
                         pattern = re.compile(pattern[1:-1])
                     except re.error as e:
-                        sys.stderr.write("Invalid regex '%s' in '%s': %s\n" %
-                                         (pattern, map_file, e))
+                        print("Invalid regex '{0}' in '{1}': {2}"
+                              .format(pattern, map_file, e),
+                              file=sys.stderr)
                         sys.exit(1)
                 mappings.append((pattern, payee, account, tags))
     return mappings
@@ -528,8 +532,8 @@ def main():
             pass
         else:
             if options.clear_screen:
-                print "\033[2J\033[;H"
-            print '\n' + entry.prompt()
+                print('\033[2J\033[;H')
+            print('\n' + entry.prompt())
             value = prompt_for_value('Payee', possible_payees, payee)
             if value:
                 modified = modified if modified else value != payee
@@ -567,7 +571,8 @@ def main():
         elif os.name == 'nt':
             sys.stdin = open('CON', 'r')
         else:
-            sys.stderr.write('Unrecognized operating system.\n')
+            print('Unrecognized operating system.',
+                  file=sys.stderr)
             sys.exit(1)
 
     def process_input_output(in_file, out_file):
@@ -579,7 +584,7 @@ def main():
         if in_file.name == '<stdin>':
             reset_stdin()
         ledger_lines = process_csv_lines(csv_lines)
-        out_file.write('\n'.join(ledger_lines))
+        print(*ledger_lines, sep='\n', file=out_file)
 
     def process_csv_lines(csv_lines):
         dialect = csv.Sniffer().sniff(

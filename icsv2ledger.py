@@ -217,29 +217,29 @@ def parse_args_and_config_file():
         '--date',
         metavar='INT',
         type=int,
-        help=('csv column number matching date'
+        help=('CSV column number matching date'
               ' (default: {0})'.format(DEFAULTS.date)))
     parser.add_argument(
         '--desc',
         metavar='STR',
-        help=('csv column number matching description'
+        help=('CSV column number matching description'
               ' (default: {0})'.format(DEFAULTS.desc)))
     parser.add_argument(
         '--debit',
         metavar='INT',
         type=int,
-        help=('csv column number matching debit amount'
+        help=('CSV column number matching debit amount'
               ' (default: {0})'.format(DEFAULTS.debit)))
     parser.add_argument(
         '--credit',
         metavar='INT',
         type=int,
-        help=('csv column number matching credit amount'
+        help=('CSV column number matching credit amount'
               ' (default: {0})'.format(DEFAULTS.credit)))
     parser.add_argument(
         '--csv-date-format',
         metavar='STR',
-        help=('date format in csv input file'
+        help=('date format in CSV input file'
               ' (default: {0})'.format(DEFAULTS.csv_date_format)))
     parser.add_argument(
         '--ledger-date-format',

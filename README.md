@@ -32,7 +32,7 @@ The 'i' stands for __interactive__. Here's what it's designed to do:
   You can also edit this by hand. It can load this in future as the
   basis of its guesses.
 
-* The payee/account names used in the autocompletion are read both from
+* The payee/account names used in the auto-completion are read both from
   the mapping file and, optionally, from a Ledger file or files. It runs
   `ledger payees` and `ledger accounts` to get the names. The tags are
   only read from the mapping file.
@@ -65,15 +65,15 @@ Options can either be used from command line or in configuration file.
                           character to clear a transaction
     --config-file FILE, -c FILE
                           configuration file
-    --credit INT          csv column number matching credit amount
+    --credit INT          CSV column number matching credit amount
     --csv-date-format STR
-                          date format in csv input file
+                          date format in CSV input file
     --currency STR        the currency of amounts
-    --date INT            csv column number matching date
-    --debit INT           csv column number matching debit amount
+    --date INT            CSV column number matching date
+    --debit INT           CSV column number matching debit amount
     --default-expense STR
                           ledger account used as destination
-    --desc STR            csv column number matching description
+    --desc STR            CSV column number matching description
     --ledger-date-format STR
                           date format for ledger output file
     --ledger-file FILE, -l FILE
@@ -96,7 +96,7 @@ underscores.
 
 There is an order of _precedence_ for options. First hard coded default
 (documented below) are used, overridden by options from configuration
-file if any, and finally overriden by options from command line if any.
+file if any, and finally overridden by options from command line if any.
 
 
 **`--account STR, -a STR`**
@@ -107,9 +107,9 @@ the only mandatory option on command line. Default is
 
 When used from command line, it is both the section name in
 configuration file and the account name. Account name could then be
-overriden in configuration file. See section
+overridden in configuration file. See section
 [Configuration file example](#configuration-file-example) where `SAV`
-from command line is overriden with `account=Assets:Bank:Savings
+from command line is overridden with `account=Assets:Bank:Savings
 Account`.
 
 **`--clear-screen, -C`**
@@ -158,7 +158,7 @@ is the CSV file column which contains the transaction date. Default is
 is the CSV file column which contains _debit_ amounts. Default is `3`.
 
 If your bank represents debits as negative numbers in the credit column,
-than just set `debit` to be `-1` and icsv2ledger will do the right
+then just set `debit` to be `-1` and icsv2ledger will do the right
 thing.
 
 **`--default-expense STR`**
@@ -171,10 +171,10 @@ for ledger transactions. Default is `Expenses:Unknown`.
 is the CSV file column which contains the transaction description as
 supplied by the bank. Default is `2`.
 
-This _description_ will be used as the input for determing which payee
+This _description_ will be used as the input for determining which payee
 and account to use by the auto-completion.
 
-It is possible to provide a comma separated list of csv column indices
+It is possible to provide a comma separated list of CSV column indices
 (like `desc=2,5`) that will concatenate fields in order to form a unique
 description. That enriched description will serve as base for the
 mapping.
@@ -233,7 +233,7 @@ account, and store this in mapping file. By setting this option, the
 description can also be mapped to additional tags.
 
 At the prompt: fill a tagname and press Enter key as many time you need
-tags. Remove an existing tag by preceding it with minus, e.g.
+tags. Remove an existing tag by preceding it with minus, like
 `-tagname`. When finished, press Enter key on an empty line.
 
 This `--tags` option only _prompt_ for tags. You have to add `; {tags}`

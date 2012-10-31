@@ -550,7 +550,7 @@ def main():
 
         if not found or (found and modified):
             # Add new or changed mapping to mappings and append to file
-            mappings.append((entry.desc, payee, account))
+            mappings.append((entry.desc, payee, account, tags))
             append_mapping_file(options.mapping_file,
                                 entry.desc, payee, account, tags)
 

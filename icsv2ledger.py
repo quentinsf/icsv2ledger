@@ -333,7 +333,7 @@ class Entry:
         else:
             self.debit = fields[options.debit - 1]
 
-        self.csv_account = options.account
+        self.credit_account = options.account
         self.currency = options.currency
         self.cleared_character = options.cleared_character
 
@@ -375,7 +375,7 @@ class Entry:
             'debit_currency': self.currency if self.debit else "",
             'debit': self.debit,
 
-            'credit_account': self.csv_account,
+            'credit_account': self.credit_account,
             'credit_currency': self.currency if self.credit else "",
             'credit': self.credit,
 

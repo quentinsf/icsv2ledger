@@ -496,6 +496,22 @@ def prompt_for_value(prompt, values, default):
     return raw_input('{0} [{1}] > '.format(prompt, default))
 
 
+def reset_stdin():
+    """ If file input is stdin, then stdin must be reset to be able
+    to use readline. How to reset stdin in explained in below URLs.
+    http://stackoverflow.com/questions/8034595/
+    http://stackoverflow.com/questions/6833526/
+    """
+    if os.name == 'posix':
+        sys.stdin = open('/dev/tty')
+    elif os.name == 'nt':
+        sys.stdin = open('CON', 'r')
+    else:
+        print('Unrecognized operating system.',
+              file=sys.stderr)
+        sys.exit(1)
+
+
 def main():
 
     options = parse_args_and_config_file()
@@ -569,21 +585,6 @@ def main():
             possible_accounts.add(account)
 
         return (payee, account, tags)
-
-    def reset_stdin():
-        """ If file input is stdin, then stdin must be reset to be able
-        to use readline. How to reset stdin in explained in below URLs.
-        http://stackoverflow.com/questions/8034595/
-        http://stackoverflow.com/questions/6833526/
-        """
-        if os.name == 'posix':
-            sys.stdin = open('/dev/tty')
-        elif os.name == 'nt':
-            sys.stdin = open('CON', 'r')
-        else:
-            print('Unrecognized operating system.',
-                  file=sys.stderr)
-            sys.exit(1)
 
     def process_input_output(in_file, out_file):
         """ Read CSV lines either from filename or stdin.

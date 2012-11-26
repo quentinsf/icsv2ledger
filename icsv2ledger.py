@@ -323,15 +323,8 @@ class Entry:
             desc.append(fields[int(index) - 1].strip())
         self.desc = ' '.join(desc).strip()
 
-        if options.credit < 0:
-            self.credit = ""
-        else:
-            self.credit = fields[options.credit - 1]
-
-        if options.debit < 0:
-            self.debit = ""
-        else:
-            self.debit = fields[options.debit - 1]
+        self.credit = get_field_at_index(fields, options.credit)
+        self.debit = get_field_at_index(fields, options.debit)
 
         self.credit_account = options.account
         self.currency = options.currency
@@ -384,6 +377,26 @@ class Entry:
             'csv': self.raw_csv}
         return template.format(
             **dict(format_data.items() + self.addons.items()))
+
+def get_field_at_index(fields, index):
+    """
+    Get the field at the given index.
+    If the index is less than 0, then we invert the sign of
+    the field at the given index
+    """
+    if index == 0:
+        value = ""
+    elif index < 0:
+        value = fields[-index - 1]
+        if value.startswith("-"):
+            value = value[1:]
+        else:
+            value = "-" + value
+    else:
+        value = fields[index - 1]
+
+    return value
+
 
 
 def payees_from_ledger(ledger_file):

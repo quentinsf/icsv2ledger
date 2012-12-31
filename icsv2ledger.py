@@ -390,6 +390,8 @@ def get_field_at_index(fields, index):
         value = fields[-index - 1]
         if value.startswith("-"):
             value = value[1:]
+        elif value == "":
+            value = ""
         else:
             value = "-" + value
     else:

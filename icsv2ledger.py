@@ -619,6 +619,10 @@ def main():
 
         ledger_lines = []
         for i, row in enumerate(bank_reader):
+            # Skip any empty lines in the input
+            if len(row) == 0:
+                continue
+
             entry = Entry(row, csv_lines[options.skip_lines + i],
                           options)
             payee, account, tags = get_payee_and_account(entry)

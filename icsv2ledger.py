@@ -554,6 +554,7 @@ def main():
     possible_accounts = set([])
     possible_payees = set([])
     possible_tags = set([])
+    md5entries = set([])
     if options.ledger_file:
         possible_accounts = accounts_from_ledger(options.ledger_file)
         possible_payees = payees_from_ledger(options.ledger_file)

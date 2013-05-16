@@ -400,6 +400,25 @@ def get_field_at_index(fields, index):
     return value
 
 
+# complicated md5 regex.  Makes sure the 32 hex string is not embedded in a
+# larger string.
+# http://stackoverflow.com/questions/373194/python-regex-for-md5-hash/376889#376889
+md5re = re.compile(r'(?i)(?<![a-z0-9])[a-f0-9]{32}(?![a-z0-9])')
+# If you want a simpler regex with no boundary checking:
+# md5re = re.compile(r'([a-fA-F\d]{32})')
+
+def get_md5(ledger_file):
+    '''Gets any MD5Sum metadata from entries in the ledger files.
+
+    Since we are accessing the data with the ledger 'print' command, it should
+    search all included files as well.'''
+    lines = from_ledger(ledger_file, 'print')
+    md5lines = [l for l in lines if l.count('MD5Sum')]
+    md5sums = []
+    for l in md5lines:
+        md5sums.append(md5re.findall(l)[0])
+    return md5sums
+
 
 def payees_from_ledger(ledger_file):
     return from_ledger(ledger_file, 'payees')
@@ -538,6 +557,8 @@ def main():
     if options.ledger_file:
         possible_accounts = accounts_from_ledger(options.ledger_file)
         possible_payees = payees_from_ledger(options.ledger_file)
+        # if there is a ledger file, get any md5sums contained in it
+        md5entries = get_md5(options.ledger_file)
 
     # Read mappings
     mappings = []
@@ -575,6 +596,13 @@ def main():
             if options.clear_screen:
                 print('\033[2J\033[;H')
             print('\n' + entry.prompt())
+            # If the entry is in the md5 list, prompt to skip it.  Return None
+            # if skipped.
+            if entry.md5sum in md5entries:
+                print('---Entry already in ledger file.---')
+                tmp = raw_input('Skip [Y/n]? ')
+                if tmp.lower() in ['y', 'yes', '1' ,'true', '']:
+                    return None
             value = prompt_for_value('Payee', possible_payees, payee)
             if value:
                 modified = modified if modified else value != payee
@@ -625,9 +653,15 @@ def main():
 
             entry = Entry(row, csv_lines[options.skip_lines + i],
                           options)
-            payee, account, tags = get_payee_and_account(entry)
-            ledger_lines.append(
-                entry.journal_entry(i + 1, payee, account, tags))
+            # Since the program flow has all the interaction in the following
+            # function, we need to test the output to see if an entry was
+            # skipped.  So skipped entries return None; check it and only
+            # append non-skipped entries.
+            payee_and_account_out = get_payee_and_account(entry)
+            if payee_and_account_out:
+                payee, account, tags = payee_and_account_out
+                ledger_lines.append(
+                    entry.journal_entry(i + 1, payee, account, tags))
 
         return ledger_lines
 

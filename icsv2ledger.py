@@ -65,7 +65,8 @@ DEFAULTS = dotdict({
     'ledger_date_format': '',
     'quiet': False,
     'skip_lines': str(1),
-    'tags': False})
+    'tags': False,
+    'delimiter': ','})
 
 FILE_DEFAULTS = dotdict({
     'config_file': [
@@ -273,6 +274,11 @@ def parse_args_and_config_file():
         action='store_true',
         help=('clear screen for every transaction'
               ' (default: {0})'.format(DEFAULTS.clear_screen)))
+    parser.add_argument(
+        '--delimiter',
+        metavar='STR',
+        help=('delimiter between field in the csv'
+              ' (default: {0})'.format(DEFAULTS.csv_date_format)))
 
     args = parser.parse_args(remaining_argv)
 
@@ -614,7 +620,7 @@ def main():
 
     def process_csv_lines(csv_lines):
         dialect = csv.Sniffer().sniff(
-            "\n".join(csv_lines[options.skip_lines:options.skip_lines + 3]))
+            "\n".join(csv_lines[options.skip_lines:options.skip_lines + 3]), options.delimiter)
         bank_reader = csv.reader(csv_lines[options.skip_lines:], dialect)
 
         ledger_lines = []

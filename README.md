@@ -73,6 +73,7 @@ Options can either be used from command line or in configuration file.
     --debit INT           CSV column number matching debit amount
     --default-expense STR
                           ledger account used as destination
+    --delimiter           CSV delimiter
     --desc STR            CSV column number matching description
     --ledger-date-format STR
                           date format for ledger output file
@@ -171,6 +172,10 @@ and use them as debits amounts.
 
 is the default ledger account used as destination (generally an expense)
 for ledger transactions. Default is `Expenses:Unknown`.
+
+**`--delimiter STR`**
+
+is the CSV delimiter character. Default is `,`.
 
 **`--desc STR`**
 

@@ -175,7 +175,7 @@ def parse_args_and_config_file():
     parser.add_argument(
         'infile',
         nargs='?',
-        type=argparse.FileType('r'),
+        type=argparse.FileType('rU'),
         default=sys.stdin,
         help=('input filename or stdin in CSV syntax'
               ' (default: {0})'.format('stdin')))

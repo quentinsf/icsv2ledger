@@ -59,6 +59,7 @@ DEFAULTS = dotdict({
     'csv_date_format': '',
     'currency': get_locale_currency_symbol(),
     'date': str(1),
+    'effective_date': str(0),
     'debit': str(3),
     'default_expense': 'Expenses:Unknown',
     'desc': str(2),
@@ -221,6 +222,12 @@ def parse_args_and_config_file():
         help=('CSV column number matching date'
               ' (default: {0})'.format(DEFAULTS.date)))
     parser.add_argument(
+        '--effective-date',
+        metavar='INT',
+        type=int,
+        help=('CSV column number matching effective date'
+              ' (default: {0})'.format(DEFAULTS.effective_date)))
+    parser.add_argument(
         '--desc',
         metavar='STR',
         help=('CSV column number matching description'
@@ -323,6 +330,17 @@ class Entry:
                 self.date = (datetime
                              .strptime(self.date, options.csv_date_format)
                              .strftime(options.ledger_date_format))
+        # convert effective dates
+        if options.effective_date:
+            self.effective_date = fields[options.effective_date - 1]
+            if options.ledger_date_format:
+                if options.ledger_date_format != options.csv_date_format:
+                    self.effective_date = (datetime
+                                 .strptime(self.effective_date, options.csv_date_format)
+                                 .strftime(options.ledger_date_format))
+        else:
+            self.effective_date = ""
+
 
         desc = []
         for index in re.compile(',\s*').split(options.desc):
@@ -366,6 +384,7 @@ class Entry:
                     if self.transaction_template else DEFAULT_TEMPLATE)
         format_data = {
             'date': self.date,
+            'effective_date': self.effective_date,
             'cleared_character': self.cleared_character,
             'payee': payee,
             'transaction_index': transaction_index,

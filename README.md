@@ -75,6 +75,7 @@ Options can either be used from command line or in configuration file.
                           ledger account used as destination
     --delimiter           CSV delimiter
     --desc STR            CSV column number matching description
+    --effective-date INT  CSV column number matching effective date
     --ledger-date-format STR
                           date format for ledger output file
     --ledger-file FILE, -l FILE
@@ -189,6 +190,13 @@ It is possible to provide a comma separated list of CSV column indices
 (like `desc=2,5`) that will concatenate fields in order to form a unique
 description. That enriched description will serve as base for the
 mapping.
+
+**`--effective-date INT`**
+
+is the CSV column number which contains the date to be used as the
+effective date. Default is `0`. Use of this option currently requires a
+template file. See section
+[Transaction template file](#transaction-template-file).
 
 **`--ledger-date-format STR`**
 
@@ -358,8 +366,8 @@ The built-in default template is as follows:
 Details on how to format the template are found in the
 [Format Specification Mini-Language](http://docs.python.org/library/string.html#formatspec).
 
-The value that can be used are: `date`, `cleared_character`, `payee`,
-`transaction_index`, `debit_account`, `debit_currency`, `debit`,
+The values that can be used are: `date`, `effective_date`, `cleared_character`,
+`payee`, `transaction_index`, `debit_account`, `debit_currency`, `debit`,
 `credit_account`, `credit_currency`, `credit`, `tags`, `md5sum`, `csv`.
 And also the addon tags like `addon_xxxx`. See section
 [Addons](#addons).

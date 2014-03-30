@@ -68,6 +68,7 @@ Options can either be used from command line or in configuration file.
     --credit INT          CSV column number matching credit amount
     --csv-date-format STR
                           date format in CSV input file
+    --csv-decimal-comma   comma as decimal separator in the CSV
     --currency STR        the currency of amounts
     --date INT            CSV column number matching date
     --debit INT           CSV column number matching debit amount
@@ -78,6 +79,8 @@ Options can either be used from command line or in configuration file.
     --effective-date INT  CSV column number matching effective date
     --ledger-date-format STR
                           date format for ledger output file
+    --ledger-decimal-comma
+                          comma as decimal separator in the ledger
     --ledger-file FILE, -l FILE
                           ledger file where to read payees/accounts
     --mapping-file FILE   file which holds the mappings
@@ -148,6 +151,13 @@ See the
 [python documentation](http://docs.python.org/library/datetime.html#strftime-strptime-behavior)
 for the various format codes supported in this expression.
 
+**`--csv-decimal-comma`**
+
+will assume that number use the comma ',' as decimal in the csv.
+
+If the `--ledger-decimal-comma` option is not set, comma will be
+converted into dot.
+
 **`--currency STR`**
 
 is the currency of amounts. Default is locale currency_symbol.
@@ -208,6 +218,14 @@ defined, then the date from CSV file is reused.
 See the
 [python documentation](http://docs.python.org/library/datetime.html#strftime-strptime-behavior)
 for the various format codes supported in this expression.
+
+**`--ledger-decimal-comma`**
+
+will assume that number should be print using the comma ',' as decimal
+when creating ledger entries.
+
+If the `--csv-decimal-comma` option is not set, dot will be converted
+into comma.
 
 **`--ledger-file FILE, -l FILE`**
 

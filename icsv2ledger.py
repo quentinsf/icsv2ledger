@@ -67,7 +67,9 @@ DEFAULTS = dotdict({
     'quiet': False,
     'skip_lines': str(1),
     'tags': False,
-    'delimiter': ','})
+    'delimiter': ',',
+    'csv_decimal_comma': False,
+    'ledger_decimal_comma': False})
 
 FILE_DEFAULTS = dotdict({
     'config_file': [
@@ -260,6 +262,16 @@ def parse_args_and_config_file():
         help=('the currency of amounts'
               ' (default: {0})'.format(DEFAULTS.currency)))
     parser.add_argument(
+        '--csv-decimal-comma',
+        action='store_true',
+        help=('comma as decimal separator in the CSV'
+              ' (default: {0})'.format(DEFAULTS.csv_decimal_comma)))
+    parser.add_argument(
+        '--ledger-decimal-comma',
+        action='store_true',
+        help=('comma as decimal separator in the ledger'
+              ' (default: {0})'.format(DEFAULTS.ledger_decimal_comma)))
+    parser.add_argument(
         '--mapping-file',
         metavar='FILE',
         help=('file which holds the mappings'
@@ -347,8 +359,8 @@ class Entry:
             desc.append(fields[int(index) - 1].strip())
         self.desc = ' '.join(desc).strip()
 
-        self.credit = get_field_at_index(fields, options.credit)
-        self.debit = get_field_at_index(fields, options.debit)
+        self.credit = get_field_at_index(fields, options.credit, options.csv_decimal_comma, options.ledger_decimal_comma)
+        self.debit = get_field_at_index(fields, options.debit, options.csv_decimal_comma, options.ledger_decimal_comma)
 
         self.credit_account = options.account
         self.currency = options.currency
@@ -403,7 +415,7 @@ class Entry:
         return template.format(
             **dict(format_data.items() + self.addons.items()))
 
-def get_field_at_index(fields, index):
+def get_field_at_index(fields, index, csv_decimal_comma, ledger_decimal_comma):
     """
     Get the field at the given index.
     If the index is less than 0, then we invert the sign of
@@ -421,6 +433,11 @@ def get_field_at_index(fields, index):
             value = "-" + value
     else:
         value = fields[index - 1]
+
+    if csv_decimal_comma and not ledger_decimal_comma:
+        value = value.replace(',', '.')
+    if not csv_decimal_comma and ledger_decimal_comma:
+        value = value.replace('.', ',')
 
     return value
 

@@ -407,6 +407,10 @@ Install a proper readline library and your good to go.
 
     % sudo easy_install readline
 
+On Windows the default Python installation does not provide a readline
+library. The [pyreadline](https://pypi.python.org/pypi/pyreadline)
+library provides native python emulation of this functionality and
+must be installed to run this utility.
 
 Author
 ------

@@ -545,7 +545,7 @@ def prompt_for_value(prompt, values, default):
     # name and don't indicate a new word
     readline.set_completer_delims("")
     readline.set_completer(completer)
-    if 'libedit' in readline.__doc__:
+    if readline.__doc__ and 'libedit' in readline.__doc__:
         readline.parse_and_bind("bind ^I rl_complete")
     else:
         readline.parse_and_bind("tab: complete")

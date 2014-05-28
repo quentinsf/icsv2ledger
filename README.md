@@ -99,7 +99,7 @@ From command line the syntax is `--long-option VALUE` with dashes, and
 in configuration file the syntax is `long_option=VALUE` with
 underscores.
 
-There is an order of _precedence_ for options. First hard coded default
+There is an order of _precedence_ for options. First hard coded defaults
 (documented below) are used, overridden by options from configuration
 file if any, and finally overridden by options from command line if any.
 
@@ -249,7 +249,7 @@ The file used will be first found in that order:
 2. `.icsv2ledgerrc-mapping` in current directory,
 3. `.icsv2ledgerrc-mapping` in home directory.
 
-Warning: the file must exists so that mapping are added to file.
+Warning: the file must exists so that mappings are added to the file.
 
 **`--quiet, -q`**
 
@@ -269,7 +269,7 @@ The normal behavior is for one description to prompt for payee and
 account, and store this in mapping file. By setting this option, the
 description can also be mapped to additional tags.
 
-At the prompt: fill a tagname and press Enter key as many time you need
+At the prompt: fill a tagname and press Enter key as many times as you need
 tags. Remove an existing tag by preceding it with minus, like
 `-tagname`. When finished, press Enter key on an empty line.
 
@@ -403,7 +403,7 @@ Known Issues
 On Mac OS X when CSV is passed via stdin to icsv2ledger you may not see
 any prompts offering defaults and asking for your input. This is due to
 an inferior readline library (libedit) installed by default on Mac OS X.
-Install a proper readline library and your good to go.
+Install a proper readline library and you're good to go.
 
     % sudo easy_install readline
 

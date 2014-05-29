@@ -434,6 +434,13 @@ def get_field_at_index(fields, index, csv_decimal_comma, ledger_decimal_comma):
     else:
         value = fields[index - 1]
 
+    if csv_decimal_comma:
+        decimal_separator = ','
+    else:
+        decimal_separator = '.'
+    re_non_number = '[^-0-9' + decimal_separator + ']'
+    value = re.sub(re_non_number, '', value)
+
     if csv_decimal_comma and not ledger_decimal_comma:
         value = value.replace(',', '.')
     if not csv_decimal_comma and ledger_decimal_comma:

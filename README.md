@@ -34,8 +34,9 @@ The 'i' stands for __interactive__. Here's what it's designed to do:
 
 * The payee/account names used in the auto-completion are read both from
   the mapping file and, optionally, from a Ledger file or files. It runs
-  `ledger payees` and `ledger accounts` to get the names. The tags are
-  only read from the mapping file.
+  `ledger payees` and `ledger accounts` to get the names. It can also
+  scan a seperate ledger file containing 'account' definitions. The tags are
+  only read from the mapping file. 
 
 
 Synopsis
@@ -391,10 +392,10 @@ manual, section 4.6 'Keeping it Consistent')
 
 The accounts file should look like:
 
-  account Expenses:Food
-  account Expenses:Enternainment
-  account Income:Salary
-  account Income:Salary:Tips
+    account Expenses:Food
+    account Expenses:Enternainment
+    account Income:Salary
+    account Income:Salary:Tips
 
 All other lines will be ignored so you if you have a single ledger file that
 has account definitions mixed throughout it, it is safe (although potentially 

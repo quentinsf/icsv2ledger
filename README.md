@@ -84,6 +84,7 @@ Options can either be used from command line or in configuration file.
     --ledger-file FILE, -l FILE
                           ledger file where to read payees/accounts
     --mapping-file FILE   file which holds the mappings
+    --accounts-file FILE  file which holds a list of allowed accounts
     --quiet, -q           do not prompt if account can be deduced
     --skip-lines INT      number of lines to skip from CSV file
     --tags, -t            prompt for transaction tags
@@ -251,6 +252,18 @@ The file used will be first found in that order:
 
 Warning: the file must exists so that mappings are added to the file.
 
+**`--accounts-file FILE`**
+
+is an optional file that can be used to hold a master list of all
+account names, and will be used as a source for account names.
+See section [Accounts file](#accounts-file).
+
+The file used will be first found in that order:
+
+1. Filename given on command line with `--accounts-file`,
+2. `.icsv2ledgerrc-accounts` in current directory,
+3. `.icsv2ledgerrc-accounts` in home directory.
+
 **`--quiet, -q`**
 
 will not prompt if account can be deduced from existing mapping. Default
@@ -369,6 +382,23 @@ Mapping is based on your historical decisions. Later matching entries
 overwrite earlier ones, that is in example above `MY COMPANY 1234` will
 be mapped to `My Company 1234` and `Income:Salary:Tips`.
 
+Accounts File
+--------------
+
+To prevent inconsistencies it is possible to user ledger --strict mode, along
+with a file that defines a list of allowable accounts. (See the ledger 3
+manual, section 4.6 'Keeping it Consistent')
+
+The accounts file should look like:
+
+  account Expenses:Food
+  account Expenses:Enternainment
+  account Income:Salary
+  account Income:Salary:Tips
+
+All other lines will be ignored so you if you have a single ledger file that
+has account definitions mixed throughout it, it is safe (although potentially 
+time consuming) to pass it to icsv2ledger as the accounts-file.
 
 Transaction template file
 -------------------------

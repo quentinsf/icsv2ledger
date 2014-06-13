@@ -81,6 +81,9 @@ FILE_DEFAULTS = dotdict({
     'mapping_file': [
         os.path.join('.', '.icsv2ledgerrc-mapping'),
         os.path.join(os.path.expanduser('~'), '.icsv2ledgerrc-mapping')],
+    'accounts_file': [
+        os.path.join('.', '.icsv2ledgerrc-accounts'),
+        os.path.join(os.path.expanduser('~'), '.icsv2ledgerrc-accounts')],
     'template_file': [
         os.path.join('.', '.icsv2ledgerrc-template'),
         os.path.join(os.path.expanduser('~'), '.icsv2ledgerrc-template')]})
@@ -272,6 +275,12 @@ def parse_args_and_config_file():
         help=('comma as decimal separator in the ledger'
               ' (default: {0})'.format(DEFAULTS.ledger_decimal_comma)))
     parser.add_argument(
+        '--accounts-file',
+        metavar='FILE',
+        help=('file which holds a list of account names'
+              ' (default search order: {0})'
+              .format(', '.join(FILE_DEFAULTS.accounts_file))))
+    parser.add_argument(
         '--mapping-file',
         metavar='FILE',
         help=('file which holds the mappings'
@@ -305,6 +314,8 @@ def parse_args_and_config_file():
         args.ledger_file, FILE_DEFAULTS.ledger_file)
     args.mapping_file = find_first_file(
         args.mapping_file, FILE_DEFAULTS.mapping_file)
+    args.accounts_file = find_first_file(
+        args.accounts_file, FILE_DEFAULTS.accounts_file)
     args.template_file = find_first_file(
         args.template_file, FILE_DEFAULTS.template_file)
 
@@ -507,6 +518,27 @@ def read_mapping_file(map_file):
     return mappings
 
 
+def read_accounts_file(account_file):
+    """ Process each line in the specified account file looking for account
+        definitions. An account definition is a line containing the word
+        'account' followed by a valid account name, e.g:
+
+            account Expenses
+            account Expenses:Utilities
+
+        All other lines are ignored.
+    """
+    accounts = []
+    pattern = re.compile("^\s*account\s+([:A-Za-z0-9-_ ]+)$")
+    with open(account_file, "r") as f:
+        for line in f.readlines():
+            mo = pattern.match(line)
+            if mo:
+                accounts.append(mo.group(1))
+
+    return accounts
+
+
 def append_mapping_file(map_file, desc, payee, account, tags):
     if map_file:
         with open(map_file, 'ab') as f:
@@ -592,6 +624,9 @@ def main():
     mappings = []
     if options.mapping_file:
         mappings = read_mapping_file(options.mapping_file)
+
+    if options.accounts_file:  
+        possible_accounts.update(read_accounts_file(options.accounts_file))
 
     # Add to possible values the ones from mappings
     for m in mappings:

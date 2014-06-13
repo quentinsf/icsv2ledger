@@ -697,8 +697,13 @@ def main():
         print(*ledger_lines, sep='\n', file=out_file)
 
     def process_csv_lines(csv_lines):
-        dialect = csv.Sniffer().sniff(
-            "\n".join(csv_lines[options.skip_lines:options.skip_lines + 3]), options.delimiter)
+        dialect = None
+        try:
+            dialect = csv.Sniffer().sniff(
+                "\n".join(csv_lines[options.skip_lines:options.skip_lines + 3]), options.delimiter)
+        except csv.Error:  # can't guess specific dialect, try without one
+            pass
+
         bank_reader = csv.reader(csv_lines[options.skip_lines:], dialect)
 
         ledger_lines = []

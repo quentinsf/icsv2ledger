@@ -405,12 +405,19 @@ class Entry:
         """
         template = (self.transaction_template
                     if self.transaction_template else DEFAULT_TEMPLATE)
+        uuid_regex = re.compile(r"UUID:", re.IGNORECASE)
+        uuid = [v for v in tags if uuid_regex.match(v)]
+        if uuid:
+          uuid = uuid[0]
+          tags.remove(uuid)
         format_data = {
             'date': self.date,
             'effective_date': self.effective_date,
             'cleared_character': self.cleared_character,
             'payee': payee,
             'transaction_index': transaction_index,
+
+            'uuid': uuid,
 
             'debit_account': account,
             'debit_currency': self.currency if self.debit else "",

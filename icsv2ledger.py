@@ -18,6 +18,7 @@ import rlcompleter
 import ConfigParser
 from datetime import datetime
 from operator import attrgetter
+from locale   import atof
 
 try:
     # argparse is in standard library as of Python >= 2.7 and >= 3.2
@@ -372,9 +373,9 @@ class Entry:
 
         self.credit = get_field_at_index(fields, options.credit, options.csv_decimal_comma, options.ledger_decimal_comma)
         self.debit = get_field_at_index(fields, options.debit, options.csv_decimal_comma, options.ledger_decimal_comma)
-        if self.credit  and self.debit and float(self.credit) == 0:
+        if self.credit  and self.debit and atof(self.credit) == 0:
             self.credit = ''
-        elif self.debit and float(self.debit) == 0:
+        elif self.credit and self.debit and atof(self.debit) == 0:
             self.debit  = ''
 
         self.credit_account = options.account

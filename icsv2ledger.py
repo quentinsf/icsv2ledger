@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python2
 #
 # Read CSV files and produce Ledger files out,
 # prompting for and learning accounts on the way.

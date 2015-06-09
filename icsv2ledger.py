@@ -66,6 +66,7 @@ DEFAULTS = dotdict({
     'desc': str(2),
     'ledger_date_format': '',
     'quiet': False,
+    'reverse': False,
     'skip_lines': str(1),
     'tags': False,
     'delimiter': ',',
@@ -216,6 +217,11 @@ def parse_args_and_config_file():
         type=int,
         help=('number of lines to skip from CSV file'
               ' (default: {0})'.format(DEFAULTS.skip_lines)))
+    parser.add_argument(
+        '--reverse',
+        action='store_true',
+        help=('reverse the order of entries in the CSV file'
+              ' (default: {0})'.format(DEFAULTS.reverse)))
     parser.add_argument(
         '--cleared-character',
         choices='*! ',
@@ -730,6 +736,8 @@ def main():
             ledger_lines.append(
                 entry.journal_entry(i + 1, payee, account, tags))
 
+        if options.reverse:
+            ledger_lines.reverse()
         return ledger_lines
 
     process_input_output(options.infile, options.outfile)

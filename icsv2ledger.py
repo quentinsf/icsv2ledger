@@ -66,6 +66,7 @@ DEFAULTS = dotdict({
     'desc': str(2),
     'ledger_date_format': '',
     'quiet': False,
+    'interactive': True,
     'skip_lines': str(1),
     'tags': False,
     'delimiter': ',',
@@ -110,6 +111,11 @@ def find_first_file(arg_file, alternatives):
             break
     return found
 
+
+class MatchingFailed(Exception):
+    def __init__(self, line):
+        super(MatchingFailed, self).__init__()
+        self.line = line
 
 class SortingHelpFormatter(HelpFormatter):
     """Sort options alphabetically when -h prints usage
@@ -205,6 +211,20 @@ def parse_args_and_config_file():
         action='store_true',
         help=('do not prompt if account can be deduced'
               ' (default: {0})'.format(DEFAULTS.quiet)))
+    parser.add_argument(
+        '--noninteractive',
+        action='store_false', dest='interactive',
+        help=('do not prompt, print unprocessed lines to rejects-file'
+              ' and exit non-zero if any were encountered'
+              ' (default mode: {0})'.format('interactive')))
+    parser.add_argument(
+        '--rejects-file',
+        metavar='FILE',
+        type=argparse.FileType('w'),
+        default=sys.stderr,
+        help=('output rejects to filename or stderr in CSV syntax,'
+              ' only used when not interactive'
+              ' (default: {0})'.format('stderr')))
     parser.add_argument(
         '--default-expense',
         metavar='STR',
@@ -325,6 +345,8 @@ def parse_args_and_config_file():
               ' if ledger_date_format is defined.',
               file=sys.stderr)
         sys.exit(1)
+    if not args.interactive:
+        args.quiet = True
 
     return args
 
@@ -667,6 +689,8 @@ def main():
         modified = False
         if options.quiet and found:
             pass
+        elif not options.interactive:
+            raise MatchingFailed(entry.raw_csv)
         else:
             if options.clear_screen:
                 print('\033[2J\033[;H')
@@ -697,16 +721,19 @@ def main():
 
         return (payee, account, tags)
 
-    def process_input_output(in_file, out_file):
+    def process_input_output(in_file, out_file, err_file):
         """ Read CSV lines either from filename or stdin.
-        Process them.
+        Process them, if matching fails, write line to err_file or stderr.
         Write Ledger lines either to filename or stdout.
         """
         csv_lines = in_file.readlines()
         if in_file.name == '<stdin>':
             reset_stdin()
-        ledger_lines = process_csv_lines(csv_lines)
+        ledger_lines, unmatched_lines = process_csv_lines(csv_lines)
         print(*ledger_lines, sep='\n', file=out_file)
+        print(*unmatched_lines, sep='\n', file=err_file)
+
+        return unmatched_lines == []
 
     def process_csv_lines(csv_lines):
         dialect = None
@@ -719,6 +746,7 @@ def main():
         bank_reader = csv.reader(csv_lines[options.skip_lines:], dialect)
 
         ledger_lines = []
+        unmatched_lines = []
         for i, row in enumerate(bank_reader):
             # Skip any empty lines in the input
             if len(row) == 0:
@@ -726,15 +754,20 @@ def main():
 
             entry = Entry(row, csv_lines[options.skip_lines + i],
                           options)
-            payee, account, tags = get_payee_and_account(entry)
-            ledger_lines.append(
-                entry.journal_entry(i + 1, payee, account, tags))
+            try:
+                payee, account, tags = get_payee_and_account(entry)
+                ledger_lines.append(
+                    entry.journal_entry(i + 1, payee, account, tags))
+            except MatchingFailed, e:
+                unmatched_lines.append(e.line)
 
-        return ledger_lines
+        return ledger_lines, unmatched_lines
 
-    process_input_output(options.infile, options.outfile)
+    return process_input_output(options.infile, options.outfile, options.rejects_file)
 
 if __name__ == "__main__":
-    main()
+    if not main():
+        # we have failed to process some lines
+        sys.exit(2)
 
 # vim: ts=4 sw=4 et

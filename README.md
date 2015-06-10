@@ -87,6 +87,7 @@ Options can either be used from command line or in configuration file.
     --mapping-file FILE   file which holds the mappings
     --accounts-file FILE  file which holds a list of allowed accounts
     --quiet, -q           do not prompt if account can be deduced
+    --reverse             reverse the order of entries in the CSV file
     --skip-lines INT      number of lines to skip from CSV file
     --tags, -t            prompt for transaction tags
     --template-file FILE  file which holds the template
@@ -269,6 +270,10 @@ The file used will be first found in that order:
 
 will not prompt if account can be deduced from existing mapping. Default
 is `False`.
+
+**`--reverse`**
+
+will print ledger entries in reverse of their order in the CSV file.
 
 **`--skip-lines INT`**
 

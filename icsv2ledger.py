@@ -22,6 +22,46 @@ from operator import attrgetter
 from locale   import atof
 
 
+class FileType(object):
+    """Based on `argparse.FileType` from python3.4.2, but with additional
+    support for the `newline` parameter to `open`.
+    """
+    def __init__(self, mode='r', bufsize=-1, encoding=None, errors=None, newline=None):
+        self._mode = mode
+        self._bufsize = bufsize
+        self._encoding = encoding
+        self._errors = errors
+        self._newline = newline
+
+    def __call__(self, string):
+        # the special argument "-" means sys.std{in,out}
+        if string == '-':
+            if 'r' in self._mode:
+                return sys.stdin
+            elif 'w' in self._mode:
+                return sys.stdout
+            else:
+                msg = 'argument "-" with mode %r' % self._mode
+                raise ValueError(msg)
+
+        # all other arguments are used as file names
+        try:
+            return open(string, self._mode, self._bufsize, self._encoding,
+                        self._errors, newline=self._newline)
+        except OSError as e:
+            message = "can't open '%s': %s"
+            raise ArgumentTypeError(message % (string, e))
+
+    def __repr__(self):
+        args = self._mode, self._bufsize
+        kwargs = [('encoding', self._encoding), ('errors', self._errors),
+                  ('newline', self._newline)]
+        args_str = ', '.join([repr(arg) for arg in args if arg != -1] +
+                             ['%s=%r' % (kw, arg) for kw, arg in kwargs
+                              if arg is not None])
+        return '%s(%s)' % (type(self).__name__, args_str)
+
+
 class dotdict(dict):
     """Enables dict.item syntax (instead of dict['item'])
     See http://stackoverflow.com/questions/224026
@@ -174,14 +214,14 @@ def parse_args_and_config_file():
     parser.add_argument(
         'infile',
         nargs='?',
-        type=argparse.FileType('r'),
+        type=FileType('r', newline=''),
         default=sys.stdin,
         help=('input filename or stdin in CSV syntax'
               ' (default: {0})'.format('stdin')))
     parser.add_argument(
         'outfile',
         nargs='?',
-        type=argparse.FileType('w', encoding='utf-8'),
+        type=FileType('w', encoding='utf-8'),
         default=sys.stdout,
         help=('output filename or stdout in Ledger syntax'
               ' (default: {0})'.format('stdout')))
@@ -516,7 +556,7 @@ def read_mapping_file(map_file):
     regular expression.
     """
     mappings = []
-    with open(map_file, "r", encoding='utf-8') as f:
+    with open(map_file, "r", encoding='utf-8', newline='') as f:
         map_reader = csv.reader(f)
         for row in map_reader:
             if len(row) > 1:
@@ -559,7 +599,7 @@ def read_accounts_file(account_file):
 
 def append_mapping_file(map_file, desc, payee, account, tags):
     if map_file:
-        with open(map_file, 'a', encoding='utf-8') as f:
+        with open(map_file, 'a', encoding='utf-8', newline='') as f:
             writer = csv.writer(f)
             writer.writerow([desc, payee, account] + tags)
 
@@ -643,7 +683,7 @@ def main():
     if options.mapping_file:
         mappings = read_mapping_file(options.mapping_file)
 
-    if options.accounts_file:  
+    if options.accounts_file:
         possible_accounts.update(read_accounts_file(options.accounts_file))
 
     # Add to possible values the ones from mappings

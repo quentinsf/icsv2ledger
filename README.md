@@ -78,6 +78,7 @@ Options can either be used from command line or in configuration file.
     --delimiter           CSV delimiter
     --desc STR            CSV column number matching description
     --effective-date INT  CSV column number matching effective date
+    --encoding STR        text encoding of CSV input file
     --ledger-date-format STR
                           date format for ledger output file
     --ledger-decimal-comma
@@ -210,6 +211,12 @@ is the CSV column number which contains the date to be used as the
 effective date. Default is `0`. Use of this option currently requires a
 template file. See section
 [Transaction template file](#transaction-template-file).
+
+**`--encoding STR`**
+
+is the text encoding of the CSV input file. Default is `utf-8`. The encoding
+should be specified if the CSV file contains non-ASCII characters (typically in
+the transaction description) in an encoding other than UTF-8.
 
 **`--ledger-date-format STR`**
 

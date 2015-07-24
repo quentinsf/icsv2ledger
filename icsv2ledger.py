@@ -7,6 +7,7 @@
 
 import argparse
 import csv
+import io
 import sys
 import os
 import hashlib
@@ -53,6 +54,7 @@ DEFAULTS = dotdict({
     'debit': str(3),
     'default_expense': 'Expenses:Unknown',
     'desc': str(2),
+    'encoding': 'utf-8',
     'ledger_date_format': '',
     'quiet': False,
     'reverse': False,
@@ -183,6 +185,11 @@ def parse_args_and_config_file():
         default=sys.stdout,
         help=('output filename or stdout in Ledger syntax'
               ' (default: {0})'.format('stdout')))
+    parser.add_argument(
+        '--encoding',
+        metavar='STR',
+        help=('encoding of csv file'
+              ' (default: {0})'.format(DEFAULTS.encoding)))
 
     parser.add_argument(
         '--ledger-file', '-l',
@@ -320,6 +327,10 @@ def parse_args_and_config_file():
               ' if ledger_date_format is defined.',
               file=sys.stderr)
         sys.exit(1)
+
+    if args.encoding != args.infile.encoding:
+        args.infile = io.TextIOWrapper(args.infile.detach(),
+                                       encoding=args.encoding)
 
     return args
 

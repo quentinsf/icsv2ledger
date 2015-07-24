@@ -151,7 +151,7 @@ See also documentation of `--debit` option for negating amounts.
 describes the date format in the CSV file. 
 
 See the
-[python documentation](http://docs.python.org/library/datetime.html#strftime-strptime-behavior)
+[python documentation](http://docs.python.org/3/library/datetime.html#strftime-and-strptime-behavior)
 for the various format codes supported in this expression.
 
 **`--csv-decimal-comma`**
@@ -219,7 +219,7 @@ defined to be able to convert dates. If `--ledger-date-format` is not
 defined, then the date from CSV file is reused.
 
 See the
-[python documentation](http://docs.python.org/library/datetime.html#strftime-strptime-behavior)
+[python documentation](http://docs.python.org/3/library/datetime.html#strftime-and-strptime-behavior)
 for the various format codes supported in this expression.
 
 **`--ledger-decimal-comma`**
@@ -418,7 +418,7 @@ The built-in default template is as follows:
         {credit_account:<60}    {credit_currency} {credit}
 
 Details on how to format the template are found in the
-[Format Specification Mini-Language](http://docs.python.org/library/string.html#formatspec).
+[Format Specification Mini-Language](http://docs.python.org/3/library/string.html#formatspec).
 
 The values that can be used are: `date`, `effective_date`, `cleared_character`,
 `payee`, `transaction_index`, `debit_account`, `debit_currency`, `debit`,

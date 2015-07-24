@@ -1,12 +1,11 @@
-#! /usr/bin/env python2
+#! /usr/bin/env python3
 #
 # Read CSV files and produce Ledger files out,
 # prompting for and learning accounts on the way.
 #
-# Requires Python >= 2.6 and Ledger >= 3.0
+# Requires Python >= 3.2 and Ledger >= 3.0
 
-from __future__ import print_function
-
+import argparse
 import csv
 import sys
 import os
@@ -15,21 +14,11 @@ import re
 import subprocess
 import readline
 import rlcompleter
-import ConfigParser
+import configparser
+from argparse import HelpFormatter
 from datetime import datetime
 from operator import attrgetter
 from locale   import atof
-
-try:
-    # argparse is in standard library as of Python >= 2.7 and >= 3.2
-    import argparse
-    from argparse import HelpFormatter
-except ImportError:
-    # for previous version, argparse package is to be installed
-    print('argparse module missing: '
-          'Please run `sudo easy_install argparse`',
-          file=sys.stderr)
-    sys.exit(1)
 
 
 class dotdict(dict):
@@ -51,8 +40,8 @@ def get_locale_currency_symbol():
 
 
 DEFAULTS = dotdict({
-    # For ConfigParser, int must be converted to str
-    # For ConfigParser, boolean must be set to False
+    # For configparser, int must be converted to str
+    # For configparser, boolean must be set to False
     'account': 'Assets:Bank:Current',
     'clear_screen': False,
     'cleared_character': '*',
@@ -149,10 +138,10 @@ def parse_args_and_config_file():
     args.config_file = find_first_file(args.config_file,
                                        FILE_DEFAULTS.config_file)
 
-    # Initialize ConfigParser with DEFAULTS, and then read config file
+    # Initialize configparser with DEFAULTS, and then read config file
     if args.config_file and ('-h' not in remaining_argv and
                              '--help' not in remaining_argv):
-        config = ConfigParser.RawConfigParser(DEFAULTS)
+        config = configparser.RawConfigParser(DEFAULTS)
         config.read(args.config_file)
         if not config.has_section(args.account):
             print('Config file {0} does not contain section {1}'
@@ -183,14 +172,14 @@ def parse_args_and_config_file():
     parser.add_argument(
         'infile',
         nargs='?',
-        type=argparse.FileType('rU'),
+        type=argparse.FileType('r'),
         default=sys.stdin,
         help=('input filename or stdin in CSV syntax'
               ' (default: {0})'.format('stdin')))
     parser.add_argument(
         'outfile',
         nargs='?',
-        type=argparse.FileType('w'),
+        type=argparse.FileType('w', encoding='utf-8'),
         default=sys.stdout,
         help=('output filename or stdout in Ledger syntax'
               ' (default: {0})'.format('stdout')))
@@ -389,7 +378,7 @@ class Entry:
         self.cleared_character = options.cleared_character
 
         if options.template_file:
-            with open(options.template_file, 'r') as f:
+            with open(options.template_file, 'r', encoding='utf-8') as f:
                 self.transaction_template = f.read()
         else:
             self.transaction_template = ""
@@ -397,7 +386,7 @@ class Entry:
         self.raw_csv = raw_csv.strip()
 
         # We also record this - in future we may use it to avoid duplication
-        self.md5sum = hashlib.md5(self.raw_csv).hexdigest()
+        self.md5sum = hashlib.md5(self.raw_csv.encode('utf-8')).hexdigest()
 
     def prompt(self):
         """
@@ -441,8 +430,8 @@ class Entry:
             'tags': '\n    ; '.join(tags),
             'md5sum': self.md5sum,
             'csv': self.raw_csv}
-        return template.format(
-            **dict(format_data.items() + self.addons.items()))
+        format_data.update(self.addons)
+        return template.format(**format_data)
 
 def get_field_at_index(fields, index, csv_decimal_comma, ledger_decimal_comma):
     """
@@ -500,7 +489,7 @@ def from_ledger(ledger_file, command):
         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     (stdout_data, stderr_data) = p.communicate()
     items = set()
-    for item in stdout_data.splitlines():
+    for item in stdout_data.decode('utf-8').splitlines():
         items.add(item)
     return items
 
@@ -516,7 +505,7 @@ def read_mapping_file(map_file):
     regular expression.
     """
     mappings = []
-    with open(map_file, "r") as f:
+    with open(map_file, "r", encoding='utf-8') as f:
         map_reader = csv.reader(f)
         for row in map_reader:
             if len(row) > 1:
@@ -548,7 +537,7 @@ def read_accounts_file(account_file):
     """
     accounts = []
     pattern = re.compile("^\s*account\s+([:A-Za-z0-9-_ ]+)$")
-    with open(account_file, "r") as f:
+    with open(account_file, "r", encoding='utf-8') as f:
         for line in f.readlines():
             mo = pattern.match(line)
             if mo:
@@ -559,7 +548,7 @@ def read_accounts_file(account_file):
 
 def append_mapping_file(map_file, desc, payee, account, tags):
     if map_file:
-        with open(map_file, 'ab') as f:
+        with open(map_file, 'a', encoding='utf-8') as f:
             writer = csv.writer(f)
             writer.writerow([desc, payee, account] + tags)
 
@@ -607,7 +596,7 @@ def prompt_for_value(prompt, values, default):
     else:
         readline.parse_and_bind("tab: complete")
 
-    return raw_input('{0} [{1}] > '.format(prompt, default))
+    return input('{0} [{1}] > '.format(prompt, default))
 
 
 def reset_stdin():
@@ -718,7 +707,7 @@ def main():
         dialect = None
         try:
             dialect = csv.Sniffer().sniff(
-                "\n".join(csv_lines[options.skip_lines:options.skip_lines + 3]), options.delimiter)
+                "".join(csv_lines[options.skip_lines:options.skip_lines + 3]), options.delimiter)
         except csv.Error:  # can't guess specific dialect, try without one
             pass
 

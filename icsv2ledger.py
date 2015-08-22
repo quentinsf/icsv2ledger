@@ -460,6 +460,10 @@ def get_field_at_index(fields, index, csv_decimal_comma, ledger_decimal_comma):
             value = ""
         else:
             value = "-" + value
+    elif index > len(fields):
+        # handle case where CSV file leaves out trailing fields if they're
+        # empty.
+        value = ""
     else:
         value = fields[index - 1]
 

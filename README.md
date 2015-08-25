@@ -190,7 +190,8 @@ for ledger transactions. Default is `Expenses:Unknown`.
 
 **`--delimiter STR`**
 
-is the CSV delimiter character. Default is `,`.
+is the CSV delimiter character. Default is `,`. Special characters can be
+expressed using standard escape sequences, such as `\t` for a tab.
 
 **`--desc STR`**
 

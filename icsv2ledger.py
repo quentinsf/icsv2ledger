@@ -152,6 +152,16 @@ class SortingHelpFormatter(HelpFormatter):
         super(SortingHelpFormatter, self).add_arguments(actions)
 
 
+def decode_escape_sequences(string):
+    # The `unicode_escape` decoder can only handle ASCII input, so it can't be
+    # fed a complete string with arbitrary characters. Instead, it is used only
+    # on the subsequences of the input string that have escape sequences and
+    # are guaranteed to only contain ASCII characters.
+    return re.sub(r'(?a)\\[\\\w{}]+',
+                  lambda m: m.group().encode('ascii').decode('unicode_escape'),
+                  string),
+
+
 def parse_args_and_config_file():
     """ Read options from config file and CLI args
     1. Reads hard coded DEFAULTS
@@ -348,8 +358,9 @@ def parse_args_and_config_file():
     parser.add_argument(
         '--delimiter',
         metavar='STR',
-        help=('delimiter between field in the csv'
-              ' (default: {0})'.format(DEFAULTS.csv_date_format)))
+        type=decode_escape_sequences,
+        help=('delimiter between fields in the csv'
+              ' (default: {0})'.format(DEFAULTS.delimiter)))
 
     args = parser.parse_args(remaining_argv)
 

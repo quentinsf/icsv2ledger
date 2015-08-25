@@ -78,6 +78,7 @@ Options can either be used from command line or in configuration file.
     --delimiter           CSV delimiter
     --desc STR            CSV column number matching description
     --effective-date INT  CSV column number matching effective date
+    --encoding STR        text encoding of CSV input file
     --ledger-date-format STR
                           date format for ledger output file
     --ledger-decimal-comma
@@ -151,7 +152,7 @@ See also documentation of `--debit` option for negating amounts.
 describes the date format in the CSV file. 
 
 See the
-[python documentation](http://docs.python.org/library/datetime.html#strftime-strptime-behavior)
+[python documentation](http://docs.python.org/3/library/datetime.html#strftime-and-strptime-behavior)
 for the various format codes supported in this expression.
 
 **`--csv-decimal-comma`**
@@ -211,6 +212,12 @@ effective date. Default is `0`. Use of this option currently requires a
 template file. See section
 [Transaction template file](#transaction-template-file).
 
+**`--encoding STR`**
+
+is the text encoding of the CSV input file. Default is `utf-8`. The encoding
+should be specified if the CSV file contains non-ASCII characters (typically in
+the transaction description) in an encoding other than UTF-8.
+
 **`--ledger-date-format STR`**
 
 describes the date format to be used when creating ledger entries. If
@@ -219,7 +226,7 @@ defined to be able to convert dates. If `--ledger-date-format` is not
 defined, then the date from CSV file is reused.
 
 See the
-[python documentation](http://docs.python.org/library/datetime.html#strftime-strptime-behavior)
+[python documentation](http://docs.python.org/3/library/datetime.html#strftime-and-strptime-behavior)
 for the various format codes supported in this expression.
 
 **`--ledger-decimal-comma`**
@@ -418,7 +425,7 @@ The built-in default template is as follows:
         {credit_account:<60}    {credit_currency} {credit}
 
 Details on how to format the template are found in the
-[Format Specification Mini-Language](http://docs.python.org/library/string.html#formatspec).
+[Format Specification Mini-Language](http://docs.python.org/3/library/string.html#formatspec).
 
 The values that can be used are: `date`, `effective_date`, `cleared_character`,
 `payee`, `transaction_index`, `debit_account`, `debit_currency`, `debit`,

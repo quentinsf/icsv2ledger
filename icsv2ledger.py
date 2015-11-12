@@ -501,6 +501,9 @@ def get_field_at_index(fields, index, csv_decimal_comma, ledger_decimal_comma):
     If the index is less than 0, then we invert the sign of
     the field at the given index
     """
+    if index == 0 or index > len(fields):
+        return ""
+
     if csv_decimal_comma:
         decimal_separator = ','
     else:
@@ -508,22 +511,21 @@ def get_field_at_index(fields, index, csv_decimal_comma, ledger_decimal_comma):
 
     re_non_number = '[^-0-9' + decimal_separator + ']'
 
-    if index == 0:
-        value = ""
-    elif index < 0:
-        value = re.sub(re_non_number, '', fields[-index - 1])
+    raw_value = fields[abs(index) - 1]
+    # Add negative symbol to raw_value if between parenthese
+    # E.g.  ($13.37) becomes -$13.37
+    if raw_value.startswith("(") and raw_value.endswith(")"):
+        raw_value = "-" + raw_value[1:-1]
+
+    value = re.sub(re_non_number, '', raw_value)
+    # Invert sign of value if index is negative.
+    if index < 0:
         if value.startswith("-"):
             value = value[1:]
         elif value == "":
             value = ""
         else:
             value = "-" + value
-    elif index > len(fields):
-        # handle case where CSV file leaves out trailing fields if they're
-        # empty.
-        value = ""
-    else:
-        value = re.sub(re_non_number, '', fields[index - 1])
 
     if csv_decimal_comma and not ledger_decimal_comma:
         value = value.replace(',', '.')

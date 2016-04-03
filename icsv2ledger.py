@@ -437,6 +437,8 @@ class Entry:
 
         self.credit_account = options.account
         self.currency = options.currency
+        self.credit_currency = getattr(
+            options, 'credit_currency', self.currency)
         self.cleared_character = options.cleared_character
 
         if options.template_file:
@@ -486,7 +488,7 @@ class Entry:
             'debit': self.debit,
 
             'credit_account': self.credit_account,
-            'credit_currency': self.currency if self.credit else "",
+            'credit_currency': self.credit_currency if self.credit else "",
             'credit': self.credit,
 
             'tags': '\n    ; '.join(tags),

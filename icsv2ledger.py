@@ -18,6 +18,7 @@ import rlcompleter
 import configparser
 from argparse import HelpFormatter
 from datetime import datetime
+from datetime import date
 from operator import attrgetter
 from locale   import atof
 
@@ -102,7 +103,8 @@ DEFAULTS = dotdict({
     'tags': False,
     'delimiter': ',',
     'csv_decimal_comma': False,
-    'ledger_decimal_comma': False})
+    'ledger_decimal_comma': False,
+    'skip_older_than': str(-1)})
 
 FILE_DEFAULTS = dotdict({
     'config_file': [
@@ -362,6 +364,13 @@ def parse_args_and_config_file():
         help=('delimiter between fields in the csv'
               ' (default: {0})'.format(DEFAULTS.delimiter)))
 
+    parser.add_argument(
+        '--skip-older-than',
+        metavar='INT',
+        type=int,
+        help=('skip entries more than X days old (-1 indicates keep all)'
+              ' (default: {0})'.format(DEFAULTS.skip_older_than)))
+
     args = parser.parse_args(remaining_argv)
 
     args.ledger_file = find_first_file(
@@ -406,11 +415,16 @@ class Entry:
 
         # Get the date and convert it into a ledger formatted date.
         self.date = fields[options.date - 1]
+        entry_date = datetime.strptime(self.date, options.csv_date_format)
         if options.ledger_date_format:
             if options.ledger_date_format != options.csv_date_format:
                 self.date = (datetime
                              .strptime(self.date, options.csv_date_format)
                              .strftime(options.ledger_date_format))
+
+        # determine how many days old this entry is
+        self.days_old = (datetime.now()-entry_date).days
+
         # convert effective dates
         if options.effective_date:
             self.effective_date = fields[options.effective_date - 1]
@@ -791,9 +805,10 @@ def main():
 
             entry = Entry(row, csv_lines[options.skip_lines + i],
                           options)
-            payee, account, tags = get_payee_and_account(entry)
-            ledger_lines.append(
-                entry.journal_entry(i + 1, payee, account, tags))
+            if (options.skip_older_than < 0) or (entry.days_old <= options.skip_older_than):
+                payee, account, tags = get_payee_and_account(entry)
+                ledger_lines.append(
+                    entry.journal_entry(i + 1, payee, account, tags))
 
         if options.reverse:
             ledger_lines.reverse()

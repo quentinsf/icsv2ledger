@@ -315,6 +315,11 @@ The file used will be first found in that order:
 2. `.icsv2ledgerrc-template` in current directory,
 3. `.icsv2ledgerrc-template` in home directory.
 
+**`--skip-older-than DAYS`**
+
+will not process any entries in the CSV file which are more than DAYS old.
+If DAYS is negative then the entire CSV file is processed.
+
 
 Example
 -------

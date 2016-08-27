@@ -620,7 +620,7 @@ def read_accounts_file(account_file):
         All other lines are ignored.
     """
     accounts = []
-    pattern = re.compile("^\s*account\s+([:A-Za-z0-9-_ ]+)$")
+    pattern = re.compile(r"^\s*account\s+([-_:\w ]+)$")
     with open(account_file, "r", encoding='utf-8') as f:
         for line in f.readlines():
             mo = pattern.match(line)

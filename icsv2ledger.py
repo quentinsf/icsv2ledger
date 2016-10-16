@@ -100,6 +100,8 @@ DEFAULTS = dotdict({
     'quiet': False,
     'reverse': False,
     'skip_lines': str(1),
+    'skip_dupes': False,
+    'incremental': False,
     'tags': False,
     'delimiter': ',',
     'csv_decimal_comma': False,
@@ -233,7 +235,7 @@ def parse_args_and_config_file():
     parser.add_argument(
         'outfile',
         nargs='?',
-        type=FileType('w', encoding='utf-8'),
+        type=FileType('a', encoding='utf-8'),
         default=sys.stdout,
         help=('output filename or stdout in Ledger syntax'
               ' (default: {0})'.format('stdout')))
@@ -265,6 +267,16 @@ def parse_args_and_config_file():
         type=int,
         help=('number of lines to skip from CSV file'
               ' (default: {0})'.format(DEFAULTS.skip_lines)))
+    parser.add_argument(
+        '--skip-dupes',
+        action='store_true',
+        help=('skip transactions that have already been imported'
+              ' (default: {0})'.format(DEFAULTS.skip_dupes)))
+    parser.add_argument(
+        '--incremental',
+        action='store_true',
+        help=('append output as transactions are processed'
+              ' (default: {0})'.format(DEFAULTS.incremental)))
     parser.add_argument(
         '--reverse',
         action='store_true',
@@ -388,6 +400,10 @@ def parse_args_and_config_file():
               file=sys.stderr)
         sys.exit(1)
 
+    if args.incremental and args.reverse:
+        print('reverse cannot be used in incremental mode')
+        sys.exit(1)
+
     if args.encoding != args.infile.encoding:
         args.infile = io.TextIOWrapper(args.infile.detach(),
                                        encoding=args.encoding)
@@ -486,8 +502,8 @@ class Entry:
         uuid_regex = re.compile(r"UUID:", re.IGNORECASE)
         uuid = [v for v in tags if uuid_regex.match(v)]
         if uuid:
-          uuid = uuid[0]
-          tags.remove(uuid)
+            uuid = uuid[0]
+            tags.remove(uuid)
         format_data = {
             'date': self.date,
             'effective_date': self.effective_date,
@@ -509,7 +525,12 @@ class Entry:
             'md5sum': self.md5sum,
             'csv': self.raw_csv}
         format_data.update(self.addons)
-        return template.format(**format_data)
+
+        # generate and clean output
+        output_lines = template.format(**format_data).split('\n')
+        output = '\n'.join([x.rstrip() for x in output_lines])
+
+        return output
 
 def get_field_at_index(fields, index, csv_decimal_comma, ledger_decimal_comma):
     """
@@ -550,6 +571,16 @@ def get_field_at_index(fields, index, csv_decimal_comma, ledger_decimal_comma):
 
     return value
 
+
+def csv_from_ledger(ledger_file):
+    pattern = re.compile(r"^\s*[;#]\s*CSV:\s*(.*?)\s*$")
+    csv_comments = set()
+    with open(ledger_file) as f:
+        for line in f:
+            m = pattern.match(line)
+            if m:
+                csv_comments.add(m.group(1))
+    return csv_comments
 
 
 def payees_from_ledger(ledger_file):
@@ -710,6 +741,7 @@ def main():
     if options.ledger_file:
         possible_accounts = accounts_from_ledger(options.ledger_file)
         possible_payees = payees_from_ledger(options.ledger_file)
+        csv_comments = csv_from_ledger(options.ledger_file)
 
     # Read mappings
     mappings = []
@@ -781,11 +813,15 @@ def main():
         Process them.
         Write Ledger lines either to filename or stdout.
         """
+        if not options.incremental:
+            out_file.truncate(0)
+
         csv_lines = in_file.readlines()
         if in_file.name == '<stdin>':
             reset_stdin()
-        ledger_lines = process_csv_lines(csv_lines)
-        print(*ledger_lines, sep='\n', file=out_file)
+        for line in  process_csv_lines(csv_lines):
+            print(line, sep='\n', file=out_file)
+            out_file.flush()
 
     def process_csv_lines(csv_lines):
         dialect = None
@@ -803,12 +839,23 @@ def main():
             if len(row) == 0:
                 continue
 
+            # Skip any lines already in the ledger file
+            if options.skip_dupes and csv_lines[options.skip_lines + i].strip() in csv_comments:
+                continue
+
             entry = Entry(row, csv_lines[options.skip_lines + i],
                           options)
             if (options.skip_older_than < 0) or (entry.days_old <= options.skip_older_than):
-                payee, account, tags = get_payee_and_account(entry)
-                ledger_lines.append(
-                    entry.journal_entry(i + 1, payee, account, tags))
+                try:
+                    payee, account, tags = get_payee_and_account(entry)
+                except KeyboardInterrupt:
+                    print()
+                    sys.exit(0)
+                line = entry.journal_entry(i + 1, payee, account, tags)
+                if options.incremental:
+                    yield line
+                else:
+                    ledger_lines.append(line)
 
         if options.reverse:
             ledger_lines.reverse()

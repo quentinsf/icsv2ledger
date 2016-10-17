@@ -79,6 +79,7 @@ Options can either be used from command line or in configuration file.
     --desc STR            CSV column number matching description
     --effective-date INT  CSV column number matching effective date
     --encoding STR        text encoding of CSV input file
+    --incremental         append output as transactions are processed
     --ledger-date-format STR
                           date format for ledger output file
     --ledger-decimal-comma
@@ -89,7 +90,9 @@ Options can either be used from command line or in configuration file.
     --accounts-file FILE  file which holds a list of allowed accounts
     --quiet, -q           do not prompt if account can be deduced
     --reverse             reverse the order of entries in the CSV file
+    --skip-dupes          skip transactions that have already been imported
     --skip-lines INT      number of lines to skip from CSV file
+    --skip-older-than     skip entries more than X days old
     --tags, -t            prompt for transaction tags
     --template-file FILE  file which holds the template
     -h, --help            show this help message and exit
@@ -219,6 +222,10 @@ is the text encoding of the CSV input file. Default is `utf-8`. The encoding
 should be specified if the CSV file contains non-ASCII characters (typically in
 the transaction description) in an encoding other than UTF-8.
 
+**`--incremental`**
+
+appends output as transactions are processed. The default flow is to process all CSV input and then output the result. When `--incremental` is specified, output is written after every transaction. This allows one to stop (ctrl-c) and restart to progressively process a CSV file (`--skip-dupes` is a useful companion option). This option cannot be used with `--reverse`.
+
 **`--ledger-date-format STR`**
 
 describes the date format to be used when creating ledger entries. If
@@ -282,6 +289,10 @@ is `False`.
 **`--reverse`**
 
 will print ledger entries in reverse of their order in the CSV file.
+
+**`--skip-dupes`**
+
+will skip transactions if the exact CSV already appears as a `; CSV: ...` comment in the current ledgerfile (which means your output template will need this comment). This can help if you download statements without using a precise date range. A useful pattern is to include CSV comments for both "sides" of a transaction if you download from multiple sources that resolve to a single transaction (e.g. paying a credit card from checking).
 
 **`--skip-lines INT`**
 

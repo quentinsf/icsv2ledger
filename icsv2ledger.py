@@ -575,7 +575,7 @@ def get_field_at_index(fields, index, csv_decimal_comma, ledger_decimal_comma):
 def csv_from_ledger(ledger_file):
     pattern = re.compile(r"^\s*[;#]\s*CSV:\s*(.*?)\s*$")
     csv_comments = set()
-    with open(ledger_file) as f:
+    with open(ledger_file, encoding='utf-8') as f:
         for line in f:
             m = pattern.match(line)
             if m:

@@ -400,10 +400,6 @@ def parse_args_and_config_file():
               file=sys.stderr)
         sys.exit(1)
 
-    if args.incremental and args.reverse:
-        print('reverse cannot be used in incremental mode')
-        sys.exit(1)
-
     if args.encoding != args.infile.encoding:
         args.infile = io.TextIOWrapper(args.infile.detach(),
                                        encoding=args.encoding)
@@ -816,34 +812,44 @@ def main():
         if not options.incremental:
             out_file.truncate(0)
 
-        csv_lines = in_file.readlines()
+        csv_lines = get_csv_lines(in_file)
         if in_file.name == '<stdin>':
             reset_stdin()
         for line in  process_csv_lines(csv_lines):
             print(line, sep='\n', file=out_file)
             out_file.flush()
 
+    def get_csv_lines(in_file):
+        """
+        Return csv lines from the in_file adjusted
+        for the skip_lines and reverse options.
+        """
+        csv_lines = in_file.readlines()
+        csv_lines = csv_lines[options.skip_lines:]
+        if options.reverse:
+            csv_lines = list(reversed(csv_lines))
+        return csv_lines
+
     def process_csv_lines(csv_lines):
         dialect = None
         try:
             dialect = csv.Sniffer().sniff(
-                "".join(csv_lines[options.skip_lines:options.skip_lines + 3]), options.delimiter)
+                    "".join(csv_lines[:3]), options.delimiter)
         except csv.Error:  # can't guess specific dialect, try without one
             pass
 
-        bank_reader = csv.reader(csv_lines[options.skip_lines:], dialect)
+        bank_reader = csv.reader(csv_lines, dialect)
 
-        ledger_lines = []
         for i, row in enumerate(bank_reader):
             # Skip any empty lines in the input
             if len(row) == 0:
                 continue
 
             # Skip any lines already in the ledger file
-            if options.skip_dupes and csv_lines[options.skip_lines + i].strip() in csv_comments:
+            if options.skip_dupes and csv_lines[i].strip() in csv_comments:
                 continue
 
-            entry = Entry(row, csv_lines[options.skip_lines + i],
+            entry = Entry(row, csv_lines[i],
                           options)
             if (options.skip_older_than < 0) or (entry.days_old <= options.skip_older_than):
                 try:
@@ -851,15 +857,7 @@ def main():
                 except KeyboardInterrupt:
                     print()
                     sys.exit(0)
-                line = entry.journal_entry(i + 1, payee, account, tags)
-                if options.incremental:
-                    yield line
-                else:
-                    ledger_lines.append(line)
-
-        if options.reverse:
-            ledger_lines.reverse()
-        return ledger_lines
+                yield entry.journal_entry(i + 1, payee, account, tags)
 
     process_input_output(options.infile, options.outfile)
 

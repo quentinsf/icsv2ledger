@@ -224,7 +224,7 @@ the transaction description) in an encoding other than UTF-8.
 
 **`--incremental`**
 
-appends output as transactions are processed. The default flow is to process all CSV input and then output the result. When `--incremental` is specified, output is written after every transaction. This allows one to stop (ctrl-c) and restart to progressively process a CSV file (`--skip-dupes` is a useful companion option). This option cannot be used with `--reverse`.
+appends output as transactions are processed. The default flow is to process all CSV input and then output the result. When `--incremental` is specified, output is written after every transaction. This allows one to stop (ctrl-c) and restart to progressively process a CSV file (`--skip-dupes` is a useful companion option).
 
 **`--ledger-date-format STR`**
 

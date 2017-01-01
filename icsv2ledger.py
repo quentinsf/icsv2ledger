@@ -569,13 +569,19 @@ def get_field_at_index(fields, index, csv_decimal_comma, ledger_decimal_comma):
 
 
 def csv_from_ledger(ledger_file):
-    pattern = re.compile(r"^\s*[;#]\s*CSV:\s*(.*?)\s*$")
-    csv_comments = set()
     with open(ledger_file) as f:
-        for line in f:
-            m = pattern.match(line)
-            if m:
-                csv_comments.add(m.group(1))
+        lines = f.read()
+        include_files = re.findall(r"include\s+(.*?)\s+", lines)
+    fnames = [ledger_file, ] + include_files
+    csv_comments = set()
+    pattern = re.compile(r"^\s*[;#]\s*CSV:\s*(.*?)\s*$")
+    for fname in fnames:
+        print(len(csv_comments))
+        with open(fname) as f:
+            for line in f:
+                m = pattern.match(line)
+                if m:
+                    csv_comments.add(m.group(1))
     return csv_comments
 
 

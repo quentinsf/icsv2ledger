@@ -8,6 +8,7 @@
 import argparse
 import csv
 import io
+import glob
 import sys
 import os
 import hashlib
@@ -134,6 +135,7 @@ DEFAULT_TEMPLATE = """\
     ; CSV: {csv}
     {debit_account:<60}    {debit_currency} {debit}
     {credit_account:<60}    {credit_currency} {credit}
+    {tags}
 """
 
 
@@ -538,7 +540,7 @@ class Entry:
             'credit_currency': self.credit_currency if self.credit else "",
             'credit': self.credit,
 
-            'tags': '\n    ; '.join(tags),
+            'tags': '; ' + ''.join(tags).replace('::',':'),
             'md5sum': self.md5sum,
             'csv': self.raw_csv}
         format_data.update(self.addons)
@@ -913,7 +915,7 @@ def main():
                 if options.clear_screen:
                     print('\033[2J\033[;H')
                 print('\n' + entry.prompt())
-                if (options.skip_dupes or optons.confirm_dupes) and entry.md5sum in md5sum_hashes:
+                if (options.skip_dupes or options.confirm_dupes) and entry.md5sum in md5sum_hashes:
                     value = 'Y'
                     # if interactive flag was passed prompt user before skipping transaction
                     if options.confirm_dupes:

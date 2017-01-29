@@ -8,6 +8,7 @@
 import argparse
 import csv
 import io
+import glob
 import sys
 import os
 import hashlib
@@ -101,12 +102,15 @@ DEFAULTS = dotdict({
     'reverse': False,
     'skip_lines': str(1),
     'skip_dupes': False,
+    'confirm_dupes': False,
     'incremental': False,
     'tags': False,
     'delimiter': ',',
     'csv_decimal_comma': False,
     'ledger_decimal_comma': False,
-    'skip_older_than': str(-1)})
+    'skip_older_than': str(-1),
+    'prompt_add_mappings': False,
+    'entry_review': False})
 
 FILE_DEFAULTS = dotdict({
     'config_file': [
@@ -131,6 +135,7 @@ DEFAULT_TEMPLATE = """\
     ; CSV: {csv}
     {debit_account:<60}    {debit_currency} {debit}
     {credit_account:<60}    {credit_currency} {credit}
+    {tags}
 """
 
 
@@ -270,8 +275,13 @@ def parse_args_and_config_file():
     parser.add_argument(
         '--skip-dupes',
         action='store_true',
-        help=('skip transactions that have already been imported'
+        help=('detect and skip transactions that have already been imported'
               ' (default: {0})'.format(DEFAULTS.skip_dupes)))
+    parser.add_argument(
+        '--confirm-dupes',
+        action='store_true',
+        help=('detect and interactively skip transactions that have already been imported'
+              ' (default: {0})'.format(DEFAULTS.confirm_dupes)))
     parser.add_argument(
         '--incremental',
         action='store_true',
@@ -383,6 +393,18 @@ def parse_args_and_config_file():
         help=('skip entries more than X days old (-1 indicates keep all)'
               ' (default: {0})'.format(DEFAULTS.skip_older_than)))
 
+    parser.add_argument(
+        '--prompt-add-mappings',
+        action='store_true',
+        help=('ask before adding entries to mapping file'
+              ' (default: {0})'.format(DEFAULTS.prompt_add_mappings)))
+
+    parser.add_argument(
+        '--entry-review',
+        action='store_true',
+        help=('displays transaction summary and request confirmation before committing to ledger'
+              ' (default: {0})'.format(DEFAULTS.entry_review)))
+
     args = parser.parse_args(remaining_argv)
 
     args.ledger_file = find_first_file(
@@ -476,7 +498,8 @@ class Entry:
         self.raw_csv = raw_csv.strip()
 
         # We also record this - in future we may use it to avoid duplication
-        self.md5sum = hashlib.md5(self.raw_csv.encode('utf-8')).hexdigest()
+        #self.md5sum = hashlib.md5(self.raw_csv.encode('utf-8')).hexdigest()
+        self.md5sum = hashlib.md5(','.join(x.strip() for x in (self.date,self.desc,self.credit,self.debit,self.credit_account)).encode('utf-8')).hexdigest()
 
     def prompt(self):
         """
@@ -500,6 +523,13 @@ class Entry:
         if uuid:
             uuid = uuid[0]
             tags.remove(uuid)
+            
+        # format tags to proper ganged string for ledger
+        if tags:
+            tags = '; ' + ''.join(tags).replace('::',':')
+        else:
+            tags = ''
+        
         format_data = {
             'date': self.date,
             'effective_date': self.effective_date,
@@ -517,14 +547,14 @@ class Entry:
             'credit_currency': self.credit_currency if self.credit else "",
             'credit': self.credit,
 
-            'tags': '\n    ; '.join(tags),
+            'tags': tags,
             'md5sum': self.md5sum,
             'csv': self.raw_csv}
         format_data.update(self.addons)
 
         # generate and clean output
         output_lines = template.format(**format_data).split('\n')
-        output = '\n'.join([x.rstrip() for x in output_lines])
+        output = '\n'.join([x.rstrip() for x in output_lines if x.strip()]) + '\n'
 
         return output
 
@@ -568,22 +598,26 @@ def get_field_at_index(fields, index, csv_decimal_comma, ledger_decimal_comma):
     return value
 
 
-def csv_from_ledger(ledger_file):
+def csv_md5sum_from_ledger(ledger_file):
     with open(ledger_file) as f:
         lines = f.read()
         include_files = re.findall(r"include\s+(.*?)\s+", lines)
-    fnames = [ledger_file, ] + include_files
+    pathes = [ledger_file, ] + include_files
     csv_comments = set()
+    md5sum_hashes = set()
     pattern = re.compile(r"^\s*[;#]\s*CSV:\s*(.*?)\s*$")
-    for fname in fnames:
-        print(len(csv_comments))
-        with open(fname) as f:
-            for line in f:
-                m = pattern.match(line)
-                if m:
-                    csv_comments.add(m.group(1))
-    return csv_comments
-
+    pattern1 = re.compile(r"^\s*[;#]\s*MD5Sum:\s*(.*?)\s*$")
+    for path in pathes:
+        for fname in glob.glob(path):
+            with open(fname) as f:
+                for line in f:
+                    m = pattern.match(line)
+                    if m:
+                        csv_comments.add(m.group(1))
+                    m = pattern1.match(line)
+                    if m:
+                        md5sum_hashes.add(m.group(1))
+    return csv_comments, md5sum_hashes
 
 def payees_from_ledger(ledger_file):
     return from_ledger(ledger_file, 'payees')
@@ -735,6 +769,8 @@ def reset_stdin():
 def main():
 
     options = parse_args_and_config_file()
+    # Define responses to yes/no prompts
+    possible_yesno =  set(['Y','N'])
 
     # Get list of accounts and payees from Ledger specified file
     possible_accounts = set([])
@@ -743,7 +779,7 @@ def main():
     if options.ledger_file:
         possible_accounts = accounts_from_ledger(options.ledger_file)
         possible_payees = payees_from_ledger(options.ledger_file)
-        csv_comments = csv_from_ledger(options.ledger_file)
+        csv_comments, md5sum_hashes = csv_md5sum_from_ledger(options.ledger_file)
 
     # Read mappings
     mappings = []
@@ -773,17 +809,23 @@ def main():
                     found = True  # do not break here, later mapping must win
             else:
                 # If the pattern isn't a string it's a regex
-                if m[0].match(entry.desc):
-                    payee, account, tags = m[1], m[2], m[3]
+                match = m[0].match(entry.desc)
+                if match:
+                #if m[0].match(entry.desc):
+                    payee = m[1]
+                    # perform regexp substitution if captures were used
+                    if match.groups():
+                        payee = m[0].sub(m[1],entry.desc)
+                    account, tags = m[2], m[3]
                     found = True
 
         modified = False
         if options.quiet and found:
             pass
         else:
-            if options.clear_screen:
-                print('\033[2J\033[;H')
-            print('\n' + entry.prompt())
+            #if options.clear_screen:
+            #    print('\033[2J\033[;H')
+            #print('\n' + entry.prompt())
             value = prompt_for_value('Payee', possible_payees, payee)
             if value:
                 modified = modified if modified else value != payee
@@ -799,9 +841,16 @@ def main():
                     tags = value
 
         if not found or (found and modified):
-            # Add new or changed mapping to mappings and append to file
-            mappings.append((entry.desc, payee, account, tags))
-            append_mapping_file(options.mapping_file,
+            value = 'Y'
+            # if prompt-add-mappings option passed then request confirmation before adding to mapping file
+            if options.prompt_add_mappings:
+                yn_response = prompt_for_value('Append to mapping file?', possible_yesno, 'Y')
+                if yn_response:
+                    value = yn_response
+            if value.upper().strip() not in ('N','NO'):
+                # Add new or changed mapping to mappings and append to file
+                mappings.append((entry.desc, payee, account, tags))
+                append_mapping_file(options.mapping_file,
                                 entry.desc, payee, account, tags)
 
             # Add new possible_values to possible values lists
@@ -851,18 +900,53 @@ def main():
             if len(row) == 0:
                 continue
 
-            # Skip any lines already in the ledger file
-            if options.skip_dupes and csv_lines[i].strip() in csv_comments:
-                continue
-
             entry = Entry(row, csv_lines[i],
                           options)
+
+            # detect duplicate entries in the ledger file and optionally skip or prompt user for action
+            #if options.skip_dupes and csv_lines[i].strip() in csv_comments:
             if (options.skip_older_than < 0) or (entry.days_old <= options.skip_older_than):
-                try:
-                    payee, account, tags = get_payee_and_account(entry)
-                except KeyboardInterrupt:
-                    print()
-                    sys.exit(0)
+                if options.clear_screen:
+                    print('\033[2J\033[;H')
+                print('\n' + entry.prompt())
+                if (options.skip_dupes or options.confirm_dupes) and entry.md5sum in md5sum_hashes:
+                    value = 'Y'
+                    # if interactive flag was passed prompt user before skipping transaction
+                    if options.confirm_dupes:
+                        yn_response = prompt_for_value('Duplicate transaction detected, skip?', possible_yesno, 'Y')
+                        if yn_response:
+                            value = yn_response
+                    if value.upper().strip() not in ('N','NO'):
+                        continue
+                while True:
+                    try:
+                        payee, account, tags = get_payee_and_account(entry)
+                    except KeyboardInterrupt:
+                        print()
+                        sys.exit(0)
+                    
+                    value = 'C'
+                    if options.entry_review:
+                        # need to display ledger formatted entry here
+                        #
+                        # request confirmation before committing transaction
+                        print('\n' + 'Ledger Entry:')
+                        print(entry.journal_entry(i + 1, payee, account, tags))
+                        yn_response = prompt_for_value('Commit transaction (Commit, Modify, Skip)?', ('C','M','S'), value)
+                        if yn_response:
+                            value = yn_response
+                    if value.upper().strip() not in ('C','COMMIT'):
+                        if value.upper().strip() in ('S','SKIP'):
+                            break
+                        else:
+                            continue
+                    else:
+                        # add md5sum of new entry, this helps detect duplicate entries in same file
+                        md5sum_hashes.add(entry.md5sum)
+                        break
+                if value.upper().strip() in ('S','SKIP'):
+                    continue
+
                 yield entry.journal_entry(i + 1, payee, account, tags)
 
     process_input_output(options.infile, options.outfile)

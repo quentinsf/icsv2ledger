@@ -90,11 +90,14 @@ Options can either be used from command line or in configuration file.
     --accounts-file FILE  file which holds a list of allowed accounts
     --quiet, -q           do not prompt if account can be deduced
     --reverse             reverse the order of entries in the CSV file
-    --skip-dupes          skip transactions that have already been imported
+    --skip-dupes          detect transactions that have alrady been imported and skip
+    --confirm-dupes       detect transactions that have already been imported and prompt to skip
     --skip-lines INT      number of lines to skip from CSV file
     --skip-older-than     skip entries more than X days old
     --tags, -t            prompt for transaction tags
     --template-file FILE  file which holds the template
+    --prompt-add-mappings prompt before adding entries to mapping file
+    --entry-review        displays summary of ledger formatted entry and prompts before committing
     -h, --help            show this help message and exit
 
 
@@ -292,7 +295,11 @@ will print ledger entries in reverse of their order in the CSV file.
 
 **`--skip-dupes`**
 
-will skip transactions if the exact CSV already appears as a `; CSV: ...` comment in the current ledgerfile (which means your output template will need this comment). This can help if you download statements without using a precise date range. A useful pattern is to include CSV comments for both "sides" of a transaction if you download from multiple sources that resolve to a single transaction (e.g. paying a credit card from checking).
+will attempt to detect duplicate transcactions in ledger file by comparing MD5Sum of transactions.  The MD5Sum is calculated from the formatted CSV values including the source account.  The source account is included to avoid false postives on generic transaction descriptions when the source account is different and thus should not be considered a duplicate. MD5Sum of existing transactions are as a `; MD5Sum: ...` comment in the current ledgerfile (which means your output template will need this comment). This can help if you download statements without using a precise date range. A useful pattern is to include MD5Sum comments for both "sides" of a transaction if you download from multiple sources that resolve to a single transaction (e.g. paying a credit card from checking).  Note: use of this flag by itself will detect and skip duplicate entries automatically with no interaction from user.  If you want to be prompted and determine whether to skip or not see --confirm-dupes.
+
+**`--confirm-dupes`**
+
+same as --skip-dupes but will prompt user to indicate if they want the detected duplicate entry to be skipped or treated as a valid entry.  This is useful when importing transactions that commonly contain generic descriptions.
 
 **`--skip-lines INT`**
 
@@ -331,6 +338,13 @@ The file used will be first found in that order:
 will not process any entries in the CSV file which are more than DAYS old.
 If DAYS is negative then the entire CSV file is processed.
 
+**`--prompt-add-mappings`**
+
+will prompt user before adding entries to the mapping file. This is useful when you would prefer to manually adjust an existing entry or add the entry manually to the mapping file.
+
+**`--entry-review`**
+
+allows the ability to review the generated ledger entry and Commit, Modify or Skip the entry.  If the entry is not committed then the values for payee, account and optionally tags is prompted for again.
 
 Example
 -------

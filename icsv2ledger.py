@@ -523,6 +523,13 @@ class Entry:
         if uuid:
             uuid = uuid[0]
             tags.remove(uuid)
+            
+        # format tags to proper ganged string for ledger
+        if tags:
+            tags = '; ' + ''.join(tags).replace('::',':')
+        else:
+            tags = ''
+        
         format_data = {
             'date': self.date,
             'effective_date': self.effective_date,
@@ -540,14 +547,14 @@ class Entry:
             'credit_currency': self.credit_currency if self.credit else "",
             'credit': self.credit,
 
-            'tags': '; ' + ''.join(tags).replace('::',':'),
+            'tags': tags,
             'md5sum': self.md5sum,
             'csv': self.raw_csv}
         format_data.update(self.addons)
 
         # generate and clean output
         output_lines = template.format(**format_data).split('\n')
-        output = '\n'.join([x.rstrip() for x in output_lines])
+        output = '\n'.join([x.rstrip() for x in output_lines if x.strip()]) + '\n'
 
         return output
 

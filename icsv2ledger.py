@@ -591,38 +591,26 @@ def get_field_at_index(fields, index, csv_decimal_comma, ledger_decimal_comma):
     return value
 
 
-def csv_from_ledger(ledger_file):
+def csv_md5sum_from_ledger(ledger_file):
     with open(ledger_file) as f:
         lines = f.read()
         include_files = re.findall(r"include\s+(.*?)\s+", lines)
-    fnames = [ledger_file, ] + include_files
+    pathes = [ledger_file, ] + include_files
     csv_comments = set()
-    pattern = re.compile(r"^\s*[;#]\s*CSV:\s*(.*?)\s*$")
-    for fname in fnames:
-        print(len(csv_comments))
-        with open(fname) as f:
-            for line in f:
-                m = pattern.match(line)
-                if m:
-                    csv_comments.add(m.group(1))
-    return csv_comments
-
-def md5sum_from_ledger(ledger_file):
-    with open(ledger_file) as f:
-        lines = f.read()
-        include_files = re.findall(r"include\s+(.*?)\s+", lines)
-    fnames = [ledger_file, ] + include_files
     md5sum_hashes = set()
-    pattern = re.compile(r"^\s*[;#]\s*MD5Sum:\s*(.*?)\s*$")
-    for fname in fnames:
-        print(len(md5sum_hashes))
-        with open(fname) as f:
-            for line in f:
-                m = pattern.match(line)
-                if m:
-                    md5sum_hashes.add(m.group(1))
-    return md5sum_hashes
-
+    pattern = re.compile(r"^\s*[;#]\s*CSV:\s*(.*?)\s*$")
+    pattern1 = re.compile(r"^\s*[;#]\s*MD5Sum:\s*(.*?)\s*$")
+    for path in pathes:
+        for fname in glob.glob(path):
+            with open(fname) as f:
+                for line in f:
+                    m = pattern.match(line)
+                    if m:
+                        csv_comments.add(m.group(1))
+                    m = pattern1.match(line)
+                    if m:
+                        md5sum_hashes.add(m.group(1))
+    return csv_comments, md5sum_hashes
 
 def payees_from_ledger(ledger_file):
     return from_ledger(ledger_file, 'payees')
@@ -784,8 +772,7 @@ def main():
     if options.ledger_file:
         possible_accounts = accounts_from_ledger(options.ledger_file)
         possible_payees = payees_from_ledger(options.ledger_file)
-        csv_comments = csv_from_ledger(options.ledger_file)
-        md5sum_hashes = md5sum_from_ledger(options.ledger_file)
+        csv_comments, md5sum_hashes = csv_md5sum_from_ledger(options.ledger_file)
 
     # Read mappings
     mappings = []

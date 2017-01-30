@@ -86,6 +86,7 @@ DEFAULTS = dotdict({
     # For configparser, int must be converted to str
     # For configparser, boolean must be set to False
     'account': 'Assets:Bank:Current',
+    'src_account': '',
     'clear_screen': False,
     'cleared_character': '*',
     'credit': str(4),
@@ -210,6 +211,7 @@ def parse_args_and_config_file():
                   file=sys.stderr)
             sys.exit(1)
         defaults = dict(config.items(args.account))
+        print(defaults)
         defaults['addons'] = {}
         if config.has_section(args.account + '_addons'):
             for item in config.items(args.account + '_addons'):
@@ -261,6 +263,11 @@ def parse_args_and_config_file():
         action='store_true',
         help=('do not prompt if account can be deduced'
               ' (default: {0})'.format(DEFAULTS.quiet)))
+    parser.add_argument(
+        '--src-account',
+        metavar='STR',
+        help=('ledger source account to use, overrides --account option specified in config section'
+              ' (default: {0})'.format(DEFAULTS.src_account)))
     parser.add_argument(
         '--default-expense',
         metavar='STR',
@@ -483,7 +490,10 @@ class Entry:
         elif self.credit and self.debit and atof(self.debit) == 0:
             self.debit  = ''
 
-        self.credit_account = options.account
+        self.credit_account = optons.account
+        if options.src_account:
+            self.credit_account = options.src_account
+        
         self.currency = options.currency
         self.credit_currency = getattr(
             options, 'credit_currency', self.currency)

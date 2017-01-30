@@ -211,7 +211,13 @@ def parse_args_and_config_file():
                   file=sys.stderr)
             sys.exit(1)
         defaults = dict(config.items(args.account))
-        print(defaults)
+        
+        if defaults['src_account']:
+            print('Section {0} in config file {1} contains command line only option src_account'
+                  .format(args.account, args.config_file),
+                  file=sys.stderr)
+            sys.exit(1)
+            
         defaults['addons'] = {}
         if config.has_section(args.account + '_addons'):
             for item in config.items(args.account + '_addons'):
@@ -490,7 +496,7 @@ class Entry:
         elif self.credit and self.debit and atof(self.debit) == 0:
             self.debit  = ''
 
-        self.credit_account = optons.account
+        self.credit_account = options.account
         if options.src_account:
             self.credit_account = options.src_account
         

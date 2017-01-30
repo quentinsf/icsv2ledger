@@ -56,11 +56,13 @@ Options summary
 ---------------
 
 Options can either be used from command line or in configuration file.
-`--account` is a mandatory option on command line. `--config-file` and
+`--account` is a mandatory option on command line. `--config-file`, `--src-account` and
 `--help` are only usable from command line.
 
     --account STR, -a STR
                           ledger account used as source
+    --src-account STR
+                          ledger account used as source, overrides --account option
     --clear-screen, -C    clear screen for every transaction
     --cleared-character {*,!, }
                           character to clear a transaction
@@ -126,6 +128,10 @@ overridden in configuration file. See section
 [Configuration file example](#configuration-file-example) where `SAV`
 from command line is overridden with `account=Assets:Bank:Savings
 Account`.
+
+**`--src-account STR`**
+
+similar to --acount option, it is the ledger account used as source for ledger transactions but allows the --account option to be overriden after the config file has been parsed.  This is a command-line only option and must not be provided in any section of the config file.  Use of this option allows users to treat sections of the config file as generic import receipes that can be used to import all files that use the same layout while providing a means to specify the ledger source account to use during the importing of transactions.
 
 **`--clear-screen, -C`**
 
@@ -454,6 +460,7 @@ The built-in default template is as follows:
         ; CSV: {csv}
         {debit_account:<60}    {debit_currency} {debit}
         {credit_account:<60}    {credit_currency} {credit}
+        {tags}
 
 Details on how to format the template are found in the
 [Format Specification Mini-Language](http://docs.python.org/3/library/string.html#formatspec).

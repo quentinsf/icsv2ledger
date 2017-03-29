@@ -472,6 +472,13 @@ And also the addon tags like `addon_xxxx`. See section
 [Addons](#addons).
 
 
+Runtime Requirements
+-------------------------
+
+icsv2ledger should work in a vanilla Python 2.7 or 3.x environment, as it uses only base packages.
+
+Note that the 'ledger' binary must be installed in the local PATH in which icsv2ledger is used, as the binary is invoked for various operations.
+
 Contributing
 ------------
 

@@ -106,6 +106,7 @@ DEFAULTS = dotdict({
     'confirm_dupes': False,
     'incremental': False,
     'tags': False,
+    'multiline_tags': False,
     'delimiter': ',',
     'csv_decimal_comma': False,
     'ledger_decimal_comma': False,
@@ -388,6 +389,11 @@ def parse_args_and_config_file():
         help=('prompt for transaction tags'
               ' (default: {0})'.format(DEFAULTS.tags)))
     parser.add_argument(
+        '--multiline-tags',
+        action='store_true',
+        help=('format tags on multiple lines'
+              ' (default: {0})'.format(DEFAULTS.multiline_tags)))
+    parser.add_argument(
         '--clear-screen', '-C',
         action='store_true',
         help=('clear screen for every transaction'
@@ -453,6 +459,8 @@ class Entry:
         raw_csv: unprocessed line from CSV file
         options: from CLI args and config file
         """
+
+        self.options = options
 
         if 'addons' in options:
             self.addons = dict((k, fields[v - 1])
@@ -541,8 +549,12 @@ class Entry:
             tags.remove(uuid)
             
         # format tags to proper ganged string for ledger
+        if self.options.multiline_tags:
+            tags_separator = '\n    ; '
+        else:
+            tags_separator = ''
         if tags:
-            tags = '; ' + ''.join(tags).replace('::',':')
+            tags = '; ' + tags_separator.join(tags).replace('::', ':')
         else:
             tags = ''
         

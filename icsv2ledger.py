@@ -949,12 +949,7 @@ def main():
                     if value.upper().strip() not in ('N','NO'):
                         continue
                 while True:
-                    try:
-                        payee, account, tags = get_payee_and_account(entry)
-                    except KeyboardInterrupt:
-                        print()
-                        sys.exit(0)
-                    
+                    payee, account, tags = get_payee_and_account(entry)
                     value = 'C'
                     if options.entry_review:
                         # need to display ledger formatted entry here
@@ -979,7 +974,11 @@ def main():
 
                 yield entry.journal_entry(i + 1, payee, account, tags)
 
-    process_input_output(options.infile, options.outfile)
+    try:
+        process_input_output(options.infile, options.outfile)
+    except KeyboardInterrupt:
+        print()
+        sys.exit(0)
 
 if __name__ == "__main__":
     main()

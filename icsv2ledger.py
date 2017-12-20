@@ -603,7 +603,7 @@ def get_field_at_index(fields, index, csv_decimal_comma, ledger_decimal_comma):
     re_non_number = '[^-0-9' + decimal_separator + ']'
 
     raw_value = fields[abs(index) - 1]
-    # Add negative symbol to raw_value if between parenthese
+    # Add negative symbol to raw_value if between parentheses
     # E.g.  ($13.37) becomes -$13.37
     if raw_value.startswith("(") and raw_value.endswith(")"):
         raw_value = "-" + raw_value[1:-1]

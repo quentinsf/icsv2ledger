@@ -15,11 +15,9 @@ import hashlib
 import re
 import subprocess
 import readline
-import rlcompleter
 import configparser
 from argparse import HelpFormatter
 from datetime import datetime
-from datetime import date
 from operator import attrgetter
 from locale   import atof
 

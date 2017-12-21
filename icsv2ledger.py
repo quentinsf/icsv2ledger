@@ -50,7 +50,7 @@ class FileType(object):
                         self._errors, newline=self._newline)
         except OSError as e:
             message = "can't open '%s': %s"
-            raise ArgumentTypeError(message % (string, e))
+            raise argparse.ArgumentTypeError(message % (string, e))
 
     def __repr__(self):
         args = self._mode, self._bufsize

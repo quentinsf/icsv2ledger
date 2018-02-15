@@ -228,7 +228,7 @@ def parse_args_and_config_file():
 
     # Build parser for remaining args on command line
     parser = argparse.ArgumentParser(
-        # Don't surpress add_help here so it will handle -h
+        # Don't suppress add_help here so it will handle -h
         # Inherit options from config_parser
         parents=[preparser],
         # print script description with -h/--help

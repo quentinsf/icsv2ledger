@@ -35,7 +35,7 @@ The 'i' stands for __interactive__. Here's what it's designed to do:
 * The payee/account names used in the auto-completion are read both from
   the mapping file and, optionally, from a Ledger file or files. It runs
   `ledger payees` and `ledger accounts` to get the names. It can also
-  scan a seperate ledger file containing 'account' definitions. The tags are
+  scan a separate ledger file containing 'account' definitions. The tags are
   only read from the mapping file. 
 
 
@@ -92,7 +92,7 @@ Options can either be used from command line or in configuration file.
     --accounts-file FILE  file which holds a list of allowed accounts
     --quiet, -q           do not prompt if account can be deduced
     --reverse             reverse the order of entries in the CSV file
-    --skip-dupes          detect transactions that have alrady been imported and skip
+    --skip-dupes          detect transactions that have already been imported and skip
     --confirm-dupes       detect transactions that have already been imported and prompt to skip
     --skip-lines INT      number of lines to skip from CSV file
     --skip-older-than     skip entries more than X days old
@@ -131,7 +131,7 @@ Account`.
 
 **`--src-account STR`**
 
-similar to --acount option, it is the ledger account used as source for ledger transactions but allows the --account option to be overriden after the config file has been parsed.  This is a command-line only option and must not be provided in any section of the config file.  Use of this option allows users to treat sections of the config file as generic import recipes that can be used to import all files that use the same layout while providing a means to specify the ledger source account to use during the importing of transactions.
+similar to `--account` option, it is the ledger account used as source for ledger transactions but allows the `--account` option to be overridden after the config file has been parsed.  This is a command-line only option and must not be provided in any section of the config file.  Use of this option allows users to treat sections of the config file as generic import recipes that can be used to import all files that use the same layout while providing a means to specify the ledger source account to use during the importing of transactions.
 
 **`--clear-screen, -C`**
 
@@ -301,11 +301,11 @@ will print ledger entries in reverse of their order in the CSV file.
 
 **`--skip-dupes`**
 
-will attempt to detect duplicate transcactions in ledger file by comparing MD5Sum of transactions.  The MD5Sum is calculated from the formatted CSV values including the source account.  The source account is included to avoid false postives on generic transaction descriptions when the source account is different and thus should not be considered a duplicate. MD5Sum of existing transactions are as a `; MD5Sum: ...` comment in the current ledgerfile (which means your output template will need this comment). This can help if you download statements without using a precise date range. A useful pattern is to include MD5Sum comments for both "sides" of a transaction if you download from multiple sources that resolve to a single transaction (e.g. paying a credit card from checking).  Note: use of this flag by itself will detect and skip duplicate entries automatically with no interaction from user.  If you want to be prompted and determine whether to skip or not see --confirm-dupes.
+will attempt to detect duplicate transactions in ledger file by comparing MD5Sum of transactions.  The MD5Sum is calculated from the formatted CSV values including the source account.  The source account is included to avoid false positives on generic transaction descriptions when the source account is different and thus should not be considered a duplicate. MD5Sum of existing transactions are as a `; MD5Sum: ...` comment in the current ledger file (which means your output template will need this comment). This can help if you download statements without using a precise date range. A useful pattern is to include MD5Sum comments for both "sides" of a transaction if you download from multiple sources that resolve to a single transaction (e.g. paying a credit card from checking).  Note: use of this flag by itself will detect and skip duplicate entries automatically with no interaction from user.  If you want to be prompted and determine whether to skip or not see `--confirm-dupes`.
 
 **`--confirm-dupes`**
 
-same as --skip-dupes but will prompt user to indicate if they want the detected duplicate entry to be skipped or treated as a valid entry.  This is useful when importing transactions that commonly contain generic descriptions.
+same as `--skip-dupes` but will prompt user to indicate if they want the detected duplicate entry to be skipped or treated as a valid entry.  This is useful when importing transactions that commonly contain generic descriptions.
 
 **`--skip-lines INT`**
 
@@ -435,14 +435,14 @@ be mapped to `My Company 1234` and `Income:Salary:Tips`.
 Accounts File
 --------------
 
-To prevent inconsistencies it is possible to user ledger --strict mode, along
-with a file that defines a list of allowable accounts. (See the ledger 3
-manual, section 4.6 'Keeping it Consistent')
+To prevent inconsistencies it is possible to user ledger `--strict` mode,
+along with a file that defines a list of allowable accounts. (See the ledger
+3 manual, section 4.6 'Keeping it Consistent')
 
 The accounts file should look like:
 
     account Expenses:Food
-    account Expenses:Enternainment
+    account Expenses:Entertainment
     account Income:Salary
     account Income:Salary:Tips
 

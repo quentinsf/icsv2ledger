@@ -16,16 +16,18 @@ import re
 import subprocess
 import readline
 import configparser
+import json
 from argparse import HelpFormatter
 from datetime import datetime
 from operator import attrgetter
-from locale   import atof
+from locale import atof
 
 
 class FileType(object):
     """Based on `argparse.FileType` from python3.4.2, but with additional
     support for the `newline` parameter to `open`.
     """
+
     def __init__(self, mode='r', bufsize=-1, encoding=None, errors=None, newline=None):
         self._mode = mode
         self._bufsize = bufsize
@@ -125,6 +127,9 @@ FILE_DEFAULTS = dotdict({
     'accounts_file': [
         os.path.join('.', '.icsv2ledgerrc-accounts'),
         os.path.join(os.path.expanduser('~'), '.icsv2ledgerrc-accounts')],
+    'regex_file': [
+        os.path.join('.', '.icsv2ledgerrc-regex'),
+        os.path.join(os.path.expanduser('~'), '.icsv2ledgerrc-regex')],
     'template_file': [
         os.path.join('.', '.icsv2ledgerrc-template'),
         os.path.join(os.path.expanduser('~'), '.icsv2ledgerrc-template')]})
@@ -156,6 +161,7 @@ class SortingHelpFormatter(HelpFormatter):
     """Sort options alphabetically when -h prints usage
     See http://stackoverflow.com/questions/12268602
     """
+
     def add_arguments(self, actions):
         actions = sorted(actions, key=attrgetter('option_strings'))
         super(SortingHelpFormatter, self).add_arguments(actions)
@@ -210,13 +216,13 @@ def parse_args_and_config_file():
                   file=sys.stderr)
             sys.exit(1)
         defaults = dict(config.items(args.account))
-        
+
         if defaults['src_account']:
             print('Section {0} in config file {1} contains command line only option src_account'
                   .format(args.account, args.config_file),
                   file=sys.stderr)
             sys.exit(1)
-            
+
         defaults['addons'] = {}
         if config.has_section(args.account + '_addons'):
             for item in config.items(args.account + '_addons'):
@@ -376,6 +382,12 @@ def parse_args_and_config_file():
               ' (default search order: {0})'
               .format(', '.join(FILE_DEFAULTS.mapping_file))))
     parser.add_argument(
+        '--regex-file',
+        metavar='FILE',
+        help=('file which holds regular expressions to be matched againts entries'
+              ' (default search order: {0})'
+              .format(', '.join(FILE_DEFAULTS.regex_file))))
+    parser.add_argument(
         '--template-file',
         metavar='FILE',
         help=('file which holds the template'
@@ -430,6 +442,8 @@ def parse_args_and_config_file():
         args.mapping_file, FILE_DEFAULTS.mapping_file)
     args.accounts_file = find_first_file(
         args.accounts_file, FILE_DEFAULTS.accounts_file)
+    args.regex_file = find_first_file(
+        args.regex_file, FILE_DEFAULTS.regex_file)
     args.template_file = find_first_file(
         args.template_file, FILE_DEFAULTS.template_file)
 
@@ -476,7 +490,7 @@ class Entry:
                              .strftime(options.ledger_date_format))
 
         # determine how many days old this entry is
-        self.days_old = (datetime.now()-entry_date).days
+        self.days_old = (datetime.now() - entry_date).days
 
         # convert effective dates
         if options.effective_date:
@@ -484,28 +498,29 @@ class Entry:
             if options.ledger_date_format:
                 if options.ledger_date_format != options.csv_date_format:
                     self.effective_date = (datetime
-                                 .strptime(self.effective_date, options.csv_date_format)
-                                 .strftime(options.ledger_date_format))
+                                           .strptime(self.effective_date, options.csv_date_format)
+                                           .strftime(options.ledger_date_format))
         else:
             self.effective_date = ""
-
 
         desc = []
         for index in re.compile(',\s*').split(options.desc):
             desc.append(fields[int(index) - 1].strip())
         self.desc = ' '.join(desc).strip()
 
-        self.credit = get_field_at_index(fields, options.credit, options.csv_decimal_comma, options.ledger_decimal_comma)
-        self.debit = get_field_at_index(fields, options.debit, options.csv_decimal_comma, options.ledger_decimal_comma)
-        if self.credit  and self.debit and atof(self.credit) == 0:
+        self.credit = get_field_at_index(
+            fields, options.credit, options.csv_decimal_comma, options.ledger_decimal_comma)
+        self.debit = get_field_at_index(
+            fields, options.debit, options.csv_decimal_comma, options.ledger_decimal_comma)
+        if self.credit and self.debit and atof(self.credit) == 0:
             self.credit = ''
         elif self.credit and self.debit and atof(self.debit) == 0:
-            self.debit  = ''
+            self.debit = ''
 
         self.credit_account = options.account
         if options.src_account:
             self.credit_account = options.src_account
-        
+
         self.currency = options.currency
         self.credit_currency = getattr(
             options, 'credit_currency', self.currency)
@@ -518,10 +533,12 @@ class Entry:
             self.transaction_template = ""
 
         self.raw_csv = raw_csv.strip()
+        self.fields = fields
 
         # We also record this - in future we may use it to avoid duplication
-        #self.md5sum = hashlib.md5(self.raw_csv.encode('utf-8')).hexdigest()
-        self.md5sum = hashlib.md5(','.join(x.strip() for x in (self.date,self.desc,self.credit,self.debit,self.credit_account)).encode('utf-8')).hexdigest()
+        # self.md5sum = hashlib.md5(self.raw_csv.encode('utf-8')).hexdigest()
+        self.md5sum = hashlib.md5(','.join(x.strip() for x in (
+            self.date, self.desc, self.credit, self.debit, self.credit_account)).encode('utf-8')).hexdigest()
 
     def prompt(self):
         """
@@ -533,7 +550,7 @@ class Entry:
             self.desc,
             self.credit if self.credit else "-" + self.debit)
 
-    def journal_entry(self, transaction_index, payee, account, tags):
+    def journal_entry(self, transaction_index, payee, account, tags, more_addons):
         """
         Return a formatted journal entry recording this Entry against
         the specified Ledger account
@@ -545,7 +562,7 @@ class Entry:
         if uuid:
             uuid = uuid[0]
             tags.remove(uuid)
-            
+
         # format tags to proper ganged string for ledger
         if self.options.multiline_tags:
             tags_separator = '\n    ; '
@@ -555,7 +572,7 @@ class Entry:
             tags = '; ' + tags_separator.join(tags).replace('::', ':')
         else:
             tags = ''
-        
+
         format_data = {
             'date': self.date,
             'effective_date': self.effective_date,
@@ -577,12 +594,15 @@ class Entry:
             'md5sum': self.md5sum,
             'csv': self.raw_csv}
         format_data.update(self.addons)
+        format_data.update(more_addons)
 
         # generate and clean output
         output_lines = template.format(**format_data).split('\n')
-        output = '\n'.join([x.rstrip() for x in output_lines if x.strip()]) + '\n'
+        output = '\n'.join([x.rstrip()
+                            for x in output_lines if x.strip()]) + '\n'
 
         return output
+
 
 def get_field_at_index(fields, index, csv_decimal_comma, ledger_decimal_comma):
     """
@@ -645,6 +665,7 @@ def csv_md5sum_from_ledger(ledger_file):
                         md5sum_hashes.add(m.group(1))
     return csv_comments, md5sum_hashes
 
+
 def payees_from_ledger(ledger_file):
     return from_ledger(ledger_file, 'payees')
 
@@ -669,6 +690,51 @@ def from_ledger(ledger_file, command):
     for item in stdout_data.decode('utf-8').splitlines():
         items.add(item)
     return items
+
+
+def read_regex_file(regex_file):
+    """
+    The regex file is a json file, consisting of a list of objects, each object
+    containing:
+      * one regular expression
+      * against what to match this expression
+      * the action to be taken when the regular expression matches
+    The syntax of an entry in the file is:
+    {"trigger":
+         {"where": <index of the column against which to match>,
+          "regex": "<regular expression>",
+          "search": true/false (if true, use re.search, otherwise use re.match)},
+     "action": {…}
+    }
+
+    There are currently four different possible actions:
+    {"type": "set-payee",
+     "value": "<new payee>"}
+    {"type": "set-tag",
+     "value": "<which tag to set>"}
+    {"type": "set-account",
+     "value": "<which account to set>"}
+    {"type": "set-addon",
+     "name": "<name of the addon field>",
+     "value": "<value to set>"}
+
+    If the regular expression contains any named groups, those named groups will
+    be used to format the strings given for value. Thus, an entry like:
+
+    {"trigger":
+        {"where": 2,
+         "regex": "The payee is (?<payee>.*)"},
+     "action":
+        {"type": "set-payee",
+         "value": "{payee}"}
+    }
+
+    would set the payee of any transaction that has the string "The payee is <whatever>"
+    in the second column to "<whatever>".
+    """
+    with open(regex_file, "r") as regex_f:
+        j = json.load(regex_f)
+        return j
 
 
 def read_mapping_file(map_file):
@@ -796,7 +862,7 @@ def main():
 
     options = parse_args_and_config_file()
     # Define responses to yes/no prompts
-    possible_yesno =  set(['Y','N'])
+    possible_yesno = set(['Y', 'N'])
 
     # Get list of accounts and payees from Ledger specified file
     possible_accounts = set([])
@@ -807,12 +873,18 @@ def main():
     if options.ledger_file:
         possible_accounts = accounts_from_ledger(options.ledger_file)
         possible_payees = payees_from_ledger(options.ledger_file)
-        csv_comments, md5sum_hashes = csv_md5sum_from_ledger(options.ledger_file)
+        csv_comments, md5sum_hashes = csv_md5sum_from_ledger(
+            options.ledger_file)
 
     # Read mappings
     mappings = []
     if options.mapping_file:
         mappings = read_mapping_file(options.mapping_file)
+
+    # Read regexps
+    regexps = []
+    if options.regex_file:
+        regexps = read_regex_file(options.regex_file)
 
     if options.accounts_file:
         possible_accounts.update(read_accounts_file(options.accounts_file))
@@ -827,7 +899,35 @@ def main():
         payee = entry.desc
         account = options.default_expense
         tags = []
+        addons = {}
         found = False
+        # Apply regexps
+        for regex in regexps:
+            r = regex['trigger']['regex']
+            column = int(regex['trigger']['where'])
+            action_type = regex['action']['type']
+            action_value = regex['action']['value']
+
+            if action_type not in ('set-payee', 'set-tag', 'set-account', 'set-addon'):
+                print("!!!! Unknown regex action: {}".format(action_type))
+                continue
+
+            if regex['trigger'].get('search', False):
+                m = re.search(r, entry.fields[column - 1])
+            else:
+                m = re.match(r, entry.fields[column - 1])
+
+            if m:
+                value = action_value.format(**m.groupdict())
+                if action_type == 'set-payee':
+                    payee = value
+                if action_type == 'set-account':
+                    account = value
+                if action_type == 'set-tag':
+                    tags.append(value)
+                if action_type == 'set-addon':
+                    addons[regex['action']['name']] = value
+
         # Try to match entry desc with mappings patterns
         for m in mappings:
             pattern = m[0]
@@ -839,11 +939,11 @@ def main():
                 # If the pattern isn't a string it's a regex
                 match = m[0].match(entry.desc)
                 if match:
-                #if m[0].match(entry.desc):
+                    # if m[0].match(entry.desc):
                     payee = m[1]
                     # perform regexp substitution if captures were used
                     if match.groups():
-                        payee = m[0].sub(m[1],entry.desc)
+                        payee = m[0].sub(m[1], entry.desc)
                     account, tags = m[2], m[3]
                     found = True
 
@@ -851,9 +951,9 @@ def main():
         if options.quiet and found:
             pass
         else:
-            #if options.clear_screen:
+            # if options.clear_screen:
             #    print('\033[2J\033[;H')
-            #print('\n' + entry.prompt())
+            # print('\n' + entry.prompt())
             value = prompt_for_value('Payee', possible_payees, payee)
             if value:
                 modified = modified if modified else value != payee
@@ -872,20 +972,21 @@ def main():
             value = 'Y'
             # if prompt-add-mappings option passed then request confirmation before adding to mapping file
             if options.prompt_add_mappings:
-                yn_response = prompt_for_value('Append to mapping file?', possible_yesno, 'Y')
+                yn_response = prompt_for_value(
+                    'Append to mapping file?', possible_yesno, 'Y')
                 if yn_response:
                     value = yn_response
-            if value.upper().strip() not in ('N','NO'):
+            if value.upper().strip() not in ('N', 'NO'):
                 # Add new or changed mapping to mappings and append to file
                 mappings.append((entry.desc, payee, account, tags))
                 append_mapping_file(options.mapping_file,
-                                entry.desc, payee, account, tags)
+                                    entry.desc, payee, account, tags)
 
             # Add new possible_values to possible values lists
             possible_payees.add(payee)
             possible_accounts.add(account)
 
-        return (payee, account, tags)
+        return (payee, account, tags, addons)
 
     def process_input_output(in_file, out_file):
         """ Read CSV lines either from filename or stdin.
@@ -898,7 +999,7 @@ def main():
         csv_lines = get_csv_lines(in_file)
         if in_file.name == '<stdin>':
             reset_stdin()
-        for line in  process_csv_lines(csv_lines):
+        for line in process_csv_lines(csv_lines):
             print(line, sep='\n', file=out_file)
             out_file.flush()
 
@@ -917,7 +1018,7 @@ def main():
         dialect = None
         try:
             dialect = csv.Sniffer().sniff(
-                    "".join(csv_lines[:3]), options.delimiter)
+                "".join(csv_lines[:3]), options.delimiter)
         except csv.Error:  # can't guess specific dialect, try without one
             pass
 
@@ -932,7 +1033,7 @@ def main():
                           options)
 
             # detect duplicate entries in the ledger file and optionally skip or prompt user for action
-            #if options.skip_dupes and csv_lines[i].strip() in csv_comments:
+            # if options.skip_dupes and csv_lines[i].strip() in csv_comments:
             if (options.skip_older_than < 0) or (entry.days_old <= options.skip_older_than):
                 if options.clear_screen:
                     print('\033[2J\033[;H')
@@ -941,25 +1042,29 @@ def main():
                     value = 'Y'
                     # if interactive flag was passed prompt user before skipping transaction
                     if options.confirm_dupes:
-                        yn_response = prompt_for_value('Duplicate transaction detected, skip?', possible_yesno, 'Y')
+                        yn_response = prompt_for_value(
+                            'Duplicate transaction detected, skip?', possible_yesno, 'Y')
                         if yn_response:
                             value = yn_response
-                    if value.upper().strip() not in ('N','NO'):
+                    if value.upper().strip() not in ('N', 'NO'):
                         continue
                 while True:
-                    payee, account, tags = get_payee_and_account(entry)
+                    payee, account, tags, addons = get_payee_and_account(
+                        entry)
                     value = 'C'
                     if options.entry_review:
                         # need to display ledger formatted entry here
                         #
                         # request confirmation before committing transaction
                         print('\n' + 'Ledger Entry:')
-                        print(entry.journal_entry(i + 1, payee, account, tags))
-                        yn_response = prompt_for_value('Commit transaction (Commit, Modify, Skip)?', ('C','M','S'), value)
+                        print(entry.journal_entry(
+                            i + 1, payee, account, tags, addons))
+                        yn_response = prompt_for_value(
+                            'Commit transaction (Commit, Modify, Skip)?', ('C', 'M', 'S'), value)
                         if yn_response:
                             value = yn_response
-                    if value.upper().strip() not in ('C','COMMIT'):
-                        if value.upper().strip() in ('S','SKIP'):
+                    if value.upper().strip() not in ('C', 'COMMIT'):
+                        if value.upper().strip() in ('S', 'SKIP'):
                             break
                         else:
                             continue
@@ -967,16 +1072,17 @@ def main():
                         # add md5sum of new entry, this helps detect duplicate entries in same file
                         md5sum_hashes.add(entry.md5sum)
                         break
-                if value.upper().strip() in ('S','SKIP'):
+                if value.upper().strip() in ('S', 'SKIP'):
                     continue
 
-                yield entry.journal_entry(i + 1, payee, account, tags)
+                yield entry.journal_entry(i + 1, payee, account, tags, addons)
 
     try:
         process_input_output(options.infile, options.outfile)
     except KeyboardInterrupt:
         print()
         sys.exit(0)
+
 
 if __name__ == "__main__":
     main()

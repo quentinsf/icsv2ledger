@@ -19,13 +19,21 @@ import configparser
 from argparse import HelpFormatter
 from datetime import datetime
 from operator import attrgetter
-from locale   import atof
+from locale import atof
+
+try:
+    import jinja2
+except ImportError:
+    have_jinja = False
+else:
+    have_jinja = True
 
 
 class FileType(object):
     """Based on `argparse.FileType` from python3.4.2, but with additional
     support for the `newline` parameter to `open`.
     """
+
     def __init__(self, mode='r', bufsize=-1, encoding=None, errors=None, newline=None):
         self._mode = mode
         self._bufsize = bufsize
@@ -110,7 +118,8 @@ DEFAULTS = dotdict({
     'ledger_decimal_comma': False,
     'skip_older_than': str(-1),
     'prompt_add_mappings': False,
-    'entry_review': False})
+    'entry_review': False,
+    'use_jinja': False})
 
 FILE_DEFAULTS = dotdict({
     'config_file': [
@@ -138,6 +147,17 @@ DEFAULT_TEMPLATE = """\
     {tags}
 """
 
+DEFAULT_JINJA_TEMPLATE = """\
+{{date}} {{cleared_character}} {{payee}}
+    ; MD5Sum: {{md5sum}}
+    ; CSV: {{csv}}
+    {{'%-60s'|format(debit_account)}}    {{debit_currency}} {{debit}}
+    {{'%-60s'|format(credit_account)}}    {{credit_currency}} {{credit}}
+    {% for tag in tags %}
+    ; {{tag}}
+    {% endfor %}
+"""
+
 
 def find_first_file(arg_file, alternatives):
     """Because of http://stackoverflow.com/questions/12397681,
@@ -156,6 +176,7 @@ class SortingHelpFormatter(HelpFormatter):
     """Sort options alphabetically when -h prints usage
     See http://stackoverflow.com/questions/12268602
     """
+
     def add_arguments(self, actions):
         actions = sorted(actions, key=attrgetter('option_strings'))
         super(SortingHelpFormatter, self).add_arguments(actions)
@@ -210,13 +231,13 @@ def parse_args_and_config_file():
                   file=sys.stderr)
             sys.exit(1)
         defaults = dict(config.items(args.account))
-        
+
         if defaults['src_account']:
             print('Section {0} in config file {1} contains command line only option src_account'
                   .format(args.account, args.config_file),
                   file=sys.stderr)
             sys.exit(1)
-            
+
         defaults['addons'] = {}
         if config.has_section(args.account + '_addons'):
             for item in config.items(args.account + '_addons'):
@@ -476,7 +497,7 @@ class Entry:
                              .strftime(options.ledger_date_format))
 
         # determine how many days old this entry is
-        self.days_old = (datetime.now()-entry_date).days
+        self.days_old = (datetime.now() - entry_date).days
 
         # convert effective dates
         if options.effective_date:
@@ -484,28 +505,29 @@ class Entry:
             if options.ledger_date_format:
                 if options.ledger_date_format != options.csv_date_format:
                     self.effective_date = (datetime
-                                 .strptime(self.effective_date, options.csv_date_format)
-                                 .strftime(options.ledger_date_format))
+                                           .strptime(self.effective_date, options.csv_date_format)
+                                           .strftime(options.ledger_date_format))
         else:
             self.effective_date = ""
-
 
         desc = []
         for index in re.compile(',\s*').split(options.desc):
             desc.append(fields[int(index) - 1].strip())
         self.desc = ' '.join(desc).strip()
 
-        self.credit = get_field_at_index(fields, options.credit, options.csv_decimal_comma, options.ledger_decimal_comma)
-        self.debit = get_field_at_index(fields, options.debit, options.csv_decimal_comma, options.ledger_decimal_comma)
-        if self.credit  and self.debit and atof(self.credit) == 0:
+        self.credit = get_field_at_index(
+            fields, options.credit, options.csv_decimal_comma, options.ledger_decimal_comma)
+        self.debit = get_field_at_index(
+            fields, options.debit, options.csv_decimal_comma, options.ledger_decimal_comma)
+        if self.credit and self.debit and atof(self.credit) == 0:
             self.credit = ''
         elif self.credit and self.debit and atof(self.debit) == 0:
-            self.debit  = ''
+            self.debit = ''
 
         self.credit_account = options.account
         if options.src_account:
             self.credit_account = options.src_account
-        
+
         self.currency = options.currency
         self.credit_currency = getattr(
             options, 'credit_currency', self.currency)
@@ -514,6 +536,10 @@ class Entry:
         if options.template_file:
             with open(options.template_file, 'r', encoding='utf-8') as f:
                 self.transaction_template = f.read()
+
+            if self.options.use_jinja:
+                self.transaction_template = jinja2.Template(
+                    self.transaction_template)
         else:
             self.transaction_template = ""
 
@@ -521,7 +547,8 @@ class Entry:
 
         # We also record this - in future we may use it to avoid duplication
         #self.md5sum = hashlib.md5(self.raw_csv.encode('utf-8')).hexdigest()
-        self.md5sum = hashlib.md5(','.join(x.strip() for x in (self.date,self.desc,self.credit,self.debit,self.credit_account)).encode('utf-8')).hexdigest()
+        self.md5sum = hashlib.md5(','.join(x.strip() for x in (
+            self.date, self.desc, self.credit, self.debit, self.credit_account)).encode('utf-8')).hexdigest()
 
     def prompt(self):
         """
@@ -538,24 +565,29 @@ class Entry:
         Return a formatted journal entry recording this Entry against
         the specified Ledger account
         """
-        template = (self.transaction_template
-                    if self.transaction_template else DEFAULT_TEMPLATE)
+        if self.transaction_template:
+            template = self.transaction_template
+        else:
+            template = (DEFAULT_TEMPLATE if not self.options.use_jinja
+                        else jinja2.Template(DEFAULT_JINJA_TEMPLATE))
+
         uuid_regex = re.compile(r"UUID:", re.IGNORECASE)
         uuid = [v for v in tags if uuid_regex.match(v)]
         if uuid:
             uuid = uuid[0]
             tags.remove(uuid)
-            
-        # format tags to proper ganged string for ledger
-        if self.options.multiline_tags:
-            tags_separator = '\n    ; '
-        else:
-            tags_separator = ''
-        if tags:
-            tags = '; ' + tags_separator.join(tags).replace('::', ':')
-        else:
-            tags = ''
-        
+
+        if not self.options.use_jinja:
+            # format tags to proper ganged string for ledger
+            if self.options.multiline_tags:
+                tags_separator = '\n    ; '
+            else:
+                tags_separator = ''
+            if tags:
+                tags = '; ' + tags_separator.join(tags).replace('::', ':')
+            else:
+                tags = ''
+
         format_data = {
             'date': self.date,
             'effective_date': self.effective_date,
@@ -579,10 +611,15 @@ class Entry:
         format_data.update(self.addons)
 
         # generate and clean output
-        output_lines = template.format(**format_data).split('\n')
-        output = '\n'.join([x.rstrip() for x in output_lines if x.strip()]) + '\n'
+        if not self.options.use_jinja:
+            output_lines = template.format(**format_data).split('\n')
+        else:
+            output_lines = template.render(**format_data).split('\n')
 
+        output = '\n'.join([x.rstrip()
+                            for x in output_lines if x.strip()]) + '\n'
         return output
+
 
 def get_field_at_index(fields, index, csv_decimal_comma, ledger_decimal_comma):
     """
@@ -644,6 +681,7 @@ def csv_md5sum_from_ledger(ledger_file):
                     if m:
                         md5sum_hashes.add(m.group(1))
     return csv_comments, md5sum_hashes
+
 
 def payees_from_ledger(ledger_file):
     return from_ledger(ledger_file, 'payees')
@@ -795,8 +833,14 @@ def reset_stdin():
 def main():
 
     options = parse_args_and_config_file()
+
+    if options.use_jinja and not have_jinja:
+        print("You specified that Jinja 2 templates should be used, yet Jinja 2 is not installed.")
+        print("Please see http://jinja.pocoo.org/docs/dev/intro/#installation for installation instructions.")
+        sys.exit(-1)
+
     # Define responses to yes/no prompts
-    possible_yesno =  set(['Y','N'])
+    possible_yesno = set(['Y', 'N'])
 
     # Get list of accounts and payees from Ledger specified file
     possible_accounts = set([])
@@ -807,7 +851,8 @@ def main():
     if options.ledger_file:
         possible_accounts = accounts_from_ledger(options.ledger_file)
         possible_payees = payees_from_ledger(options.ledger_file)
-        csv_comments, md5sum_hashes = csv_md5sum_from_ledger(options.ledger_file)
+        csv_comments, md5sum_hashes = csv_md5sum_from_ledger(
+            options.ledger_file)
 
     # Read mappings
     mappings = []
@@ -839,11 +884,11 @@ def main():
                 # If the pattern isn't a string it's a regex
                 match = m[0].match(entry.desc)
                 if match:
-                #if m[0].match(entry.desc):
+                    # if m[0].match(entry.desc):
                     payee = m[1]
                     # perform regexp substitution if captures were used
                     if match.groups():
-                        payee = m[0].sub(m[1],entry.desc)
+                        payee = m[0].sub(m[1], entry.desc)
                     account, tags = m[2], m[3]
                     found = True
 
@@ -851,7 +896,7 @@ def main():
         if options.quiet and found:
             pass
         else:
-            #if options.clear_screen:
+            # if options.clear_screen:
             #    print('\033[2J\033[;H')
             #print('\n' + entry.prompt())
             value = prompt_for_value('Payee', possible_payees, payee)
@@ -872,14 +917,15 @@ def main():
             value = 'Y'
             # if prompt-add-mappings option passed then request confirmation before adding to mapping file
             if options.prompt_add_mappings:
-                yn_response = prompt_for_value('Append to mapping file?', possible_yesno, 'Y')
+                yn_response = prompt_for_value(
+                    'Append to mapping file?', possible_yesno, 'Y')
                 if yn_response:
                     value = yn_response
-            if value.upper().strip() not in ('N','NO'):
+            if value.upper().strip() not in ('N', 'NO'):
                 # Add new or changed mapping to mappings and append to file
                 mappings.append((entry.desc, payee, account, tags))
                 append_mapping_file(options.mapping_file,
-                                entry.desc, payee, account, tags)
+                                    entry.desc, payee, account, tags)
 
             # Add new possible_values to possible values lists
             possible_payees.add(payee)
@@ -898,7 +944,7 @@ def main():
         csv_lines = get_csv_lines(in_file)
         if in_file.name == '<stdin>':
             reset_stdin()
-        for line in  process_csv_lines(csv_lines):
+        for line in process_csv_lines(csv_lines):
             print(line, sep='\n', file=out_file)
             out_file.flush()
 
@@ -917,7 +963,7 @@ def main():
         dialect = None
         try:
             dialect = csv.Sniffer().sniff(
-                    "".join(csv_lines[:3]), options.delimiter)
+                "".join(csv_lines[:3]), options.delimiter)
         except csv.Error:  # can't guess specific dialect, try without one
             pass
 
@@ -932,7 +978,7 @@ def main():
                           options)
 
             # detect duplicate entries in the ledger file and optionally skip or prompt user for action
-            #if options.skip_dupes and csv_lines[i].strip() in csv_comments:
+            # if options.skip_dupes and csv_lines[i].strip() in csv_comments:
             if (options.skip_older_than < 0) or (entry.days_old <= options.skip_older_than):
                 if options.clear_screen:
                     print('\033[2J\033[;H')
@@ -941,10 +987,11 @@ def main():
                     value = 'Y'
                     # if interactive flag was passed prompt user before skipping transaction
                     if options.confirm_dupes:
-                        yn_response = prompt_for_value('Duplicate transaction detected, skip?', possible_yesno, 'Y')
+                        yn_response = prompt_for_value(
+                            'Duplicate transaction detected, skip?', possible_yesno, 'Y')
                         if yn_response:
                             value = yn_response
-                    if value.upper().strip() not in ('N','NO'):
+                    if value.upper().strip() not in ('N', 'NO'):
                         continue
                 while True:
                     payee, account, tags = get_payee_and_account(entry)
@@ -955,11 +1002,12 @@ def main():
                         # request confirmation before committing transaction
                         print('\n' + 'Ledger Entry:')
                         print(entry.journal_entry(i + 1, payee, account, tags))
-                        yn_response = prompt_for_value('Commit transaction (Commit, Modify, Skip)?', ('C','M','S'), value)
+                        yn_response = prompt_for_value(
+                            'Commit transaction (Commit, Modify, Skip)?', ('C', 'M', 'S'), value)
                         if yn_response:
                             value = yn_response
-                    if value.upper().strip() not in ('C','COMMIT'):
-                        if value.upper().strip() in ('S','SKIP'):
+                    if value.upper().strip() not in ('C', 'COMMIT'):
+                        if value.upper().strip() in ('S', 'SKIP'):
                             break
                         else:
                             continue
@@ -967,7 +1015,7 @@ def main():
                         # add md5sum of new entry, this helps detect duplicate entries in same file
                         md5sum_hashes.add(entry.md5sum)
                         break
-                if value.upper().strip() in ('S','SKIP'):
+                if value.upper().strip() in ('S', 'SKIP'):
                     continue
 
                 yield entry.journal_entry(i + 1, payee, account, tags)
@@ -977,6 +1025,7 @@ def main():
     except KeyboardInterrupt:
         print()
         sys.exit(0)
+
 
 if __name__ == "__main__":
     main()

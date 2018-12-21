@@ -628,7 +628,8 @@ def csv_md5sum_from_ledger(ledger_file):
     with open(ledger_file) as f:
         lines = f.read()
         include_files = re.findall(r"include\s+(.*?)\s+", lines)
-    pathes = [ledger_file, ] + include_files
+    ledger_dir = os.path.dirname(ledger_file)
+    pathes = [ledger_file, ] + list(map(lambda x: os.path.join(ledger_dir, x), include_files))
     csv_comments = set()
     md5sum_hashes = set()
     pattern = re.compile(r"^\s*[;#]\s*CSV:\s*(.*?)\s*$")

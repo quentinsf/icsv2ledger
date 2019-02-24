@@ -127,7 +127,11 @@ FILE_DEFAULTS = dotdict({
         os.path.join(os.path.expanduser('~'), '.icsv2ledgerrc-accounts')],
     'template_file': [
         os.path.join('.', '.icsv2ledgerrc-template'),
-        os.path.join(os.path.expanduser('~'), '.icsv2ledgerrc-template')]})
+        os.path.join(os.path.expanduser('~'), '.icsv2ledgerrc-template')],
+    'ledger_binary_file': [
+        '/usr/bin/ledger',
+        '/usr/local/bin/ledger'
+    ]})
 
 DEFAULT_TEMPLATE = """\
 {date} {cleared_character} {payee}
@@ -256,7 +260,12 @@ def parse_args_and_config_file():
         metavar='STR',
         help=('encoding of csv file'
               ' (default: {0})'.format(DEFAULTS.encoding)))
-
+    parser.add_argument(
+        '--ledger-binary',
+        metavar='FILE',
+        help=('path to ledger binary'
+              ' (default search order: {0})'
+              .format(', '.join(FILE_DEFAULTS.ledger_binary_file))))
     parser.add_argument(
         '--ledger-file', '-l',
         metavar='FILE',
@@ -432,6 +441,17 @@ def parse_args_and_config_file():
         args.accounts_file, FILE_DEFAULTS.accounts_file)
     args.template_file = find_first_file(
         args.template_file, FILE_DEFAULTS.template_file)
+    if args.ledger_binary is not None:
+        # if ledger_binary was explicitly specified, check if it actually exists
+        if find_first_file(args.ledger_binary, []) is None:
+            # if not, throw an exception
+            raise FileNotFoundError(
+                'Can\'t find ledger binary at the specified location: {0}'.format(args.ledger_binary)
+            )
+    else:
+        # otherwise try defaults
+        args.ledger_binary = find_first_file(
+            args.ledger_binary, FILE_DEFAULTS.ledger_binary_file)
 
     if args.ledger_date_format and not args.csv_date_format:
         print('csv_date_format must be set'
@@ -645,30 +665,34 @@ def csv_md5sum_from_ledger(ledger_file):
                         md5sum_hashes.add(m.group(1))
     return csv_comments, md5sum_hashes
 
-def payees_from_ledger(ledger_file):
-    return from_ledger(ledger_file, 'payees')
+
+def payees_from_ledger(ledger_file, ledger_binary_file):
+    return from_ledger(ledger_file, ledger_binary_file, 'payees')
 
 
-def accounts_from_ledger(ledger_file):
-    return from_ledger(ledger_file, 'accounts')
+def accounts_from_ledger(ledger_file, ledger_binary_file):
+    return from_ledger(ledger_file, ledger_binary_file, 'accounts')
 
 
-def from_ledger(ledger_file, command):
-    ledger = 'ledger'
-    for f in ['/usr/bin/ledger', '/usr/local/bin/ledger']:
-        if os.path.exists(f):
-            ledger = f
-            break
-
+def from_ledger(ledger_file, ledger_binary_file, command):
+    if ledger_binary_file is not None:
+        # if either the --ledger-binary parameter was specified or a default ledger path was valid, use that
+        ledger = ledger_binary_file
+    else:
+        # otherwise let's hope it's in PATH
+        ledger = 'ledger'
     cmd = [ledger, "-f", ledger_file, command]
-    p = subprocess.Popen(
-        cmd,
-        stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    (stdout_data, stderr_data) = p.communicate()
-    items = set()
-    for item in stdout_data.decode('utf-8').splitlines():
-        items.add(item)
-    return items
+    try:
+        p = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        (stdout_data, stderr_data) = p.communicate()
+        items = set()
+        for item in stdout_data.decode('utf-8').splitlines():
+            items.add(item)
+        return items
+    except FileNotFoundError:
+        raise FileNotFoundError('The system can\'t find the following ledger binary: {0}'.format(ledger))
 
 
 def read_mapping_file(map_file):
@@ -796,7 +820,7 @@ def main():
 
     options = parse_args_and_config_file()
     # Define responses to yes/no prompts
-    possible_yesno =  set(['Y','N'])
+    possible_yesno = set(['Y','N'])
 
     # Get list of accounts and payees from Ledger specified file
     possible_accounts = set([])
@@ -805,8 +829,8 @@ def main():
     md5sum_hashes = set()
     csv_comments = set()
     if options.ledger_file:
-        possible_accounts = accounts_from_ledger(options.ledger_file)
-        possible_payees = payees_from_ledger(options.ledger_file)
+        possible_accounts = accounts_from_ledger(options.ledger_file, options.ledger_binary)
+        possible_payees = payees_from_ledger(options.ledger_file, options.ledger_binary)
         csv_comments, md5sum_hashes = csv_md5sum_from_ledger(options.ledger_file)
 
     # Read mappings
@@ -977,6 +1001,7 @@ def main():
     except KeyboardInterrupt:
         print()
         sys.exit(0)
+
 
 if __name__ == "__main__":
     main()

@@ -82,6 +82,7 @@ Options can either be used from command line or in configuration file.
     --effective-date INT  CSV column number matching effective date
     --encoding STR        text encoding of CSV input file
     --incremental         append output as transactions are processed
+    --ledger-binary FILE  path to ledger binary  
     --ledger-date-format STR
                           date format for ledger output file
     --ledger-decimal-comma
@@ -234,6 +235,11 @@ the transaction description) in an encoding other than UTF-8.
 **`--incremental`**
 
 appends output as transactions are processed. The default flow is to process all CSV input and then output the result. When `--incremental` is specified, output is written after every transaction. This allows one to stop (ctrl-c) and restart to progressively process a CSV file (`--skip-dupes` is a useful companion option).
+
+**`--ledger-binary`**
+
+is the path to the ledger binary. Not neccessary if it is in `PATH` or is at either `/usr/bin/ledger` or
+`/usr/local/bin/ledger`
 
 **`--ledger-date-format STR`**
 

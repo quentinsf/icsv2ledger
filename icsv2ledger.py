@@ -625,7 +625,7 @@ def get_field_at_index(fields, index, csv_decimal_comma, ledger_decimal_comma):
 
 
 def csv_md5sum_from_ledger(ledger_file):
-    with open(ledger_file) as f:
+    with open(ledger_file, encoding="utf-8") as f:
         lines = f.read()
         include_files = re.findall(r"include\s+(.*?)\s+", lines)
     pathes = [ledger_file, ] + include_files
@@ -635,7 +635,7 @@ def csv_md5sum_from_ledger(ledger_file):
     pattern1 = re.compile(r"^\s*[;#]\s*MD5Sum:\s*(.*?)\s*$")
     for path in pathes:
         for fname in glob.glob(path):
-            with open(fname) as f:
+            with open(fname, encoding="utf-8") as f:
                 for line in f:
                     m = pattern.match(line)
                     if m:

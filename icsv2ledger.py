@@ -21,6 +21,8 @@ from datetime import datetime
 from operator import attrgetter
 from locale   import atof
 
+from model import MappingInfo
+
 
 class FileType(object):
     """Based on `argparse.FileType` from python3.4.2, but with additional
@@ -214,13 +216,13 @@ def parse_args_and_config_file():
                   file=sys.stderr)
             sys.exit(1)
         defaults = dict(config.items(args.account))
-        
+
         if defaults['src_account']:
             print('Section {0} in config file {1} contains command line only option src_account'
                   .format(args.account, args.config_file),
                   file=sys.stderr)
             sys.exit(1)
-            
+
         defaults['addons'] = {}
         if config.has_section(args.account + '_addons'):
             for item in config.items(args.account + '_addons'):
@@ -525,7 +527,7 @@ class Entry:
         self.credit_account = options.account
         if options.src_account:
             self.credit_account = options.src_account
-        
+
         self.currency = options.currency
         self.credit_currency = getattr(
             options, 'credit_currency', self.currency)
@@ -565,7 +567,7 @@ class Entry:
         if uuid:
             uuid = uuid[0]
             tags.remove(uuid)
-            
+
         # format tags to proper ganged string for ledger
         if self.options.multiline_tags:
             tags_separator = '\n    ; '
@@ -575,7 +577,7 @@ class Entry:
             tags = '; ' + tags_separator.join(tags).replace('::', ':')
         else:
             tags = ''
-        
+
         format_data = {
             'date': self.date,
             'effective_date': self.effective_date,
@@ -695,7 +697,7 @@ def from_ledger(ledger_file, ledger_binary_file, command):
         raise FileNotFoundError('The system can\'t find the following ledger binary: {0}'.format(ledger))
 
 
-def read_mapping_file(map_file):
+def read_mapping_file(map_file) -> [MappingInfo]:
     """
     Mappings are simply a CSV file with three columns.
     The first is a string to be matched against an entry description.
@@ -722,7 +724,7 @@ def read_mapping_file(map_file):
                               .format(pattern, map_file, e),
                               file=sys.stderr)
                         sys.exit(1)
-                mappings.append((pattern, payee, account, tags))
+                mappings.append(MappingInfo(pattern, payee, account, tags))
     return mappings
 
 
@@ -816,11 +818,10 @@ def reset_stdin():
         sys.exit(1)
 
 
-def main():
+def main(options):
 
-    options = parse_args_and_config_file()
     # Define responses to yes/no prompts
-    possible_yesno = set(['Y','N'])
+    possible_yesno = {'Y', 'N'}
 
     # Get list of accounts and payees from Ledger specified file
     possible_accounts = set([])
@@ -843,9 +844,9 @@ def main():
 
     # Add to possible values the ones from mappings
     for m in mappings:
-        possible_payees.add(m[1])
-        possible_accounts.add(m[2])
-        possible_tags.update(set(m[3]))
+        possible_payees.add(m.payee)
+        possible_accounts.add(m.account)
+        possible_tags.update(set(m.tags))
 
     def get_payee_and_account(entry):
         payee = entry.desc
@@ -854,21 +855,21 @@ def main():
         found = False
         # Try to match entry desc with mappings patterns
         for m in mappings:
-            pattern = m[0]
+            pattern = m.pattern
             if isinstance(pattern, str):
                 if entry.desc == pattern:
-                    payee, account, tags = m[1], m[2], m[3]
+                    payee, account, tags = m.payee, m.account, m.tags
                     found = True  # do not break here, later mapping must win
             else:
                 # If the pattern isn't a string it's a regex
-                match = m[0].match(entry.desc)
+                match = m.pattern.match(entry.desc)
                 if match:
                 #if m[0].match(entry.desc):
-                    payee = m[1]
+                    payee = m.payee
                     # perform regexp substitution if captures were used
                     if match.groups():
-                        payee = m[0].sub(m[1],entry.desc)
-                    account, tags = m[2], m[3]
+                        payee = m.pattern.sub(m.payee, entry.desc)
+                    account, tags = m.account, m.tags
                     found = True
 
         modified = False
@@ -1004,6 +1005,7 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    options = parse_args_and_config_file()
+    main(options)
 
 # vim: ts=4 sw=4 et

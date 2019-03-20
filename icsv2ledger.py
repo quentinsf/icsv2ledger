@@ -516,12 +516,15 @@ class Entry:
             desc.append(fields[int(index) - 1].strip())
         self.desc = ' '.join(desc).strip()
 
-        if self.credit  and self.debit and atof(self.credit) == 0:
-            self.credit = ''
-        elif self.credit and self.debit and atof(self.debit) == 0:
-            self.debit  = ''
+
         self.credit, self.credit_currency = get_field_at_index(fields, options.credit, options.csv_decimal_comma, options.ledger_decimal_comma)
         self.debit, self.debit_currency = get_field_at_index(fields, options.debit, options.csv_decimal_comma, options.ledger_decimal_comma)
+
+        if (not atof(self.credit)) or (not atof(self.debit)):
+            if atof(self.credit) == 0:
+                self.credit = ""
+            else:
+                self.debit = ""
 
         self.credit_account = options.account
         if options.src_account:

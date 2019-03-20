@@ -16,10 +16,12 @@ import re
 import subprocess
 import readline
 import configparser
+import locale
 from argparse import HelpFormatter
 from datetime import datetime
 from operator import attrgetter
 from locale   import atof
+from decimal import *
 
 
 class FileType(object):
@@ -515,20 +517,27 @@ class Entry:
             desc.append(fields[int(index) - 1].strip())
         self.desc = ' '.join(desc).strip()
 
-        self.credit = get_field_at_index(fields, options.credit, options.csv_decimal_comma, options.ledger_decimal_comma)
-        self.debit = get_field_at_index(fields, options.debit, options.csv_decimal_comma, options.ledger_decimal_comma)
-        if self.credit  and self.debit and atof(self.credit) == 0:
-            self.credit = ''
-        elif self.credit and self.debit and atof(self.debit) == 0:
-            self.debit  = ''
+
+        self.credit, self.credit_currency = get_field_at_index(fields, options.credit, options.csv_decimal_comma, options.ledger_decimal_comma)
+        self.debit, self.debit_currency = get_field_at_index(fields, options.debit, options.csv_decimal_comma, options.ledger_decimal_comma)
+
+        if (not atof(self.credit)) or (not atof(self.debit)):
+            if atof(self.credit) == 0:
+                self.credit = ""
+            else:
+                self.debit = ""
 
         self.credit_account = options.account
         if options.src_account:
             self.credit_account = options.src_account
-        
+
         self.currency = options.currency
+
         self.credit_currency = getattr(
-            options, 'credit_currency', self.currency)
+            options, 'credit_currency', self.credit_currency or self.currency)
+        self.debit_currency = getattr(
+            options, 'debit_currency', self.debit_currency or self.currency)
+
         self.cleared_character = options.cleared_character
 
         if options.template_file:
@@ -565,7 +574,7 @@ class Entry:
         if uuid:
             uuid = uuid[0]
             tags.remove(uuid)
-            
+
         # format tags to proper ganged string for ledger
         if self.options.multiline_tags:
             tags_separator = '\n    ; '
@@ -586,7 +595,7 @@ class Entry:
             'uuid': uuid,
 
             'debit_account': account,
-            'debit_currency': self.currency if self.debit else "",
+            'debit_currency': self.debit_currency  if self.debit else "",
             'debit': self.debit,
 
             'credit_account': self.credit_account,
@@ -613,12 +622,11 @@ def get_field_at_index(fields, index, csv_decimal_comma, ledger_decimal_comma):
     if index == 0 or index > len(fields):
         return ""
 
+    locale._override_localeconv["thousands_sep"] = ","
+    locale._override_localeconv["decimal_point"] = "."
     if csv_decimal_comma:
-        decimal_separator = ','
-    else:
-        decimal_separator = '.'
-
-    re_non_number = '[^-0-9' + decimal_separator + ']'
+        locale._override_localeconv["thousands_sep"] = "."
+        locale._override_localeconv["decimal_point"] = ","
 
     raw_value = fields[abs(index) - 1]
     # Add negative symbol to raw_value if between parentheses
@@ -626,22 +634,26 @@ def get_field_at_index(fields, index, csv_decimal_comma, ledger_decimal_comma):
     if raw_value.startswith("(") and raw_value.endswith(")"):
         raw_value = "-" + raw_value[1:-1]
 
-    value = re.sub(re_non_number, '', raw_value)
+    match = re.match(r"\s*((?P<minus>-)?\s*(?P<currency>[^-\d\s.,]+)?\s*){2}\s*(?P<number>[\d.,]+)\s*", raw_value);
+
+    value = (match.group('minus') or "" ) +  match.group('number')
+    value = Decimal(locale.delocalize(value));
+
     # Invert sign of value if index is negative.
     if index < 0:
-        if value.startswith("-"):
-            value = value[1:]
-        elif value == "":
-            value = ""
-        else:
-            value = "-" + value
+       value = value * -1
 
-    if csv_decimal_comma and not ledger_decimal_comma:
-        value = value.replace(',', '.')
-    if not csv_decimal_comma and ledger_decimal_comma:
-        value = value.replace('.', ',')
+    value = str(value);
 
-    return value
+    locale._override_localeconv["thousands_sep"] = ","
+    locale._override_localeconv["decimal_point"] = "."
+    if ledger_decimal_comma:
+        locale._override_localeconv["thousands_sep"] = "."
+        locale._override_localeconv["decimal_point"] = ","
+        value =  locale.str(value)
+
+    locale._override_localeconv ={}
+    return value, match.group("currency")
 
 
 def csv_md5sum_from_ledger(ledger_file):

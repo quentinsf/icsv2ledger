@@ -626,7 +626,9 @@ def get_field_at_index(fields, index, csv_decimal_comma, ledger_decimal_comma):
     if raw_value.startswith("(") and raw_value.endswith(")"):
         raw_value = "-" + raw_value[1:-1]
 
-    value = re.sub(re_non_number, '', raw_value)
+    match = re.match(r"\s*(?P<minus>-)?\s*(?P<currency>[^-\d\s.,]*)\s*(?P<number>-?\s*[\d.,]*)\s*", raw_value);
+    value = (match.group('minus') or "" ) +  match.group('number')
+    print(match.groups());
     # Invert sign of value if index is negative.
     if index < 0:
         if value.startswith("-"):
@@ -641,6 +643,7 @@ def get_field_at_index(fields, index, csv_decimal_comma, ledger_decimal_comma):
     if not csv_decimal_comma and ledger_decimal_comma:
         value = value.replace('.', ',')
 
+    value = (match.group('currency') or "") + " " + str(value)
     return value
 
 

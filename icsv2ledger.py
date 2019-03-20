@@ -16,6 +16,7 @@ import re
 import subprocess
 import readline
 import configparser
+import locale
 from argparse import HelpFormatter
 from datetime import datetime
 from operator import attrgetter
@@ -621,10 +622,11 @@ def get_field_at_index(fields, index, csv_decimal_comma, ledger_decimal_comma):
     if index == 0 or index > len(fields):
         return ""
 
+    locale._override_localeconv["thousands_sep"] = ","
+    locale._override_localeconv["decimal_point"] = "."
     if csv_decimal_comma:
-        decimal_separator = ','
-    else:
-        decimal_separator = '.'
+        locale._override_localeconv["thousands_sep"] = "."
+        locale._override_localeconv["decimal_point"] = ","
 
     raw_value = fields[abs(index) - 1]
     # Add negative symbol to raw_value if between parentheses
@@ -633,11 +635,9 @@ def get_field_at_index(fields, index, csv_decimal_comma, ledger_decimal_comma):
         raw_value = "-" + raw_value[1:-1]
 
     match = re.match(r"\s*((?P<minus>-)?\s*(?P<currency>[^-\d\s.,]+)?\s*){2}\s*(?P<number>[\d.,]+)\s*", raw_value);
-    print(raw_value);
-    value = (match.group('minus') or "" ) +  match.group('number')
-    value = Decimal(value);
 
-    print(match.groupdict());
+    value = (match.group('minus') or "" ) +  match.group('number')
+    value = Decimal(locale.delocalize(value));
 
     # Invert sign of value if index is negative.
     if index < 0:
@@ -645,11 +645,14 @@ def get_field_at_index(fields, index, csv_decimal_comma, ledger_decimal_comma):
 
     value = str(value);
 
-    if csv_decimal_comma and not ledger_decimal_comma:
-        value = value.replace(',', '.')
-    if not csv_decimal_comma and ledger_decimal_comma:
-        value = value.replace('.', ',')
+    locale._override_localeconv["thousands_sep"] = ","
+    locale._override_localeconv["decimal_point"] = "."
+    if ledger_decimal_comma:
+        locale._override_localeconv["thousands_sep"] = "."
+        locale._override_localeconv["decimal_point"] = ","
+        value =  locale.str(value)
 
+    locale._override_localeconv ={}
     return value, match.group("currency")
 
 

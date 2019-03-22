@@ -54,6 +54,13 @@ class TestLocationService(unittest.TestCase):
         self.assertEqual(result[2].tags, ["tag3", "tag4"])
         self.assertEqual(result[2].transfer_to, "Assets:Bank:Savings")
 
+    def test_tag_transfer_to_file_mapping(self):
+        result = read_mapping_file('stubs/transfer_mapping_file.txt')
+
+        self.assertEqual(result[2].tags, ["tag1"])
+        self.assertEqual(result[2].transfer_to, "Assets:Bank:Savings")
+        self.assertEqual(result[2].transfer_to_file, "savings.dat")
+
     def test_transfer_parsing(self):
         infile = open('stubs/transfer.csv')
         out = StringIO()

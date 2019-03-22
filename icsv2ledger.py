@@ -718,16 +718,13 @@ def read_mapping_file(map_file) -> [MappingInfo]:
     with open(map_file, "r", encoding='utf-8', newline='') as f:
         map_reader = csv.reader(f)
         for row in map_reader:
-            if len(row) > 1:
+            if len(row) > 2:
                 pattern = row[0].strip()
                 payee = row[1].strip()
                 account = row[2].strip()
-                if len(row) >= 4 and row[3].startswith("transfer_to="):
-                    transfer_to = row[3].split('=')[1].strip()
-                    tags = row[4:]
-                else:
-                    transfer_to = None
-                    tags = row[3:]
+                tags = [col for col in row[3:] if not col.startswith(("transfer_to", "file"))]
+                transfer_to = row[3].split('=')[1].strip() if ''.join(row[3:]).startswith("transfer_to=") else None
+                transfer_to_file = row[4].split('=')[1].strip() if ''.join(row[4:]).startswith("file=") else None
 
                 if pattern.startswith('/') and pattern.endswith('/'):
                     try:
@@ -737,7 +734,7 @@ def read_mapping_file(map_file) -> [MappingInfo]:
                               .format(pattern, map_file, e),
                               file=sys.stderr)
                         sys.exit(1)
-                mappings.append(MappingInfo(pattern, payee, account, tags, transfer_to))
+                mappings.append(MappingInfo(pattern, payee, account, tags, transfer_to, transfer_to_file))
     return mappings
 
 

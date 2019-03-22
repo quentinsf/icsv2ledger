@@ -10,3 +10,4 @@ class MappingInfo:
     account: str
     tags: [str]
     transfer_to: Optional[str]
+    transfer_to_file: Optional[str]

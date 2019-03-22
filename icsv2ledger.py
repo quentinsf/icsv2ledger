@@ -461,7 +461,7 @@ def parse_args_and_config_file():
               file=sys.stderr)
         sys.exit(1)
 
-    if args.encoding != args.infile.encoding:
+    if args.encoding.lower() != args.infile.encoding.lower():
         args.infile = io.TextIOWrapper(args.infile.detach(),
                                        encoding=args.encoding)
 
@@ -555,7 +555,7 @@ class Entry:
             self.desc,
             self.credit if self.credit else "-" + self.debit)
 
-    def journal_entry(self, transaction_index, payee, account, tags):
+    def _build_entry_str(self, transaction_index, payee, credit_account, debit_account, tags) -> str:
         """
         Return a formatted journal entry recording this Entry against
         the specified Ledger account
@@ -587,11 +587,11 @@ class Entry:
 
             'uuid': uuid,
 
-            'debit_account': account,
+            'debit_account': debit_account,
             'debit_currency': self.currency if self.debit else "",
             'debit': self.debit,
 
-            'credit_account': self.credit_account,
+            'credit_account': credit_account,
             'credit_currency': self.credit_currency if self.credit else "",
             'credit': self.credit,
 
@@ -605,6 +605,13 @@ class Entry:
         output = '\n'.join([x.rstrip() for x in output_lines if x.strip()]) + '\n'
 
         return output
+
+    def journal_entry(self, transaction_index, payee, debit_account, tags):
+        return self._build_entry_str(transaction_index, payee, self.credit_account, debit_account, tags)
+
+    def transfer_entry(self, transaction_index, payee, account, transfer_to, tags):
+        return self._build_entry_str(transaction_index, payee, account, transfer_to, tags)
+
 
 def get_field_at_index(fields, index, csv_decimal_comma, ledger_decimal_comma):
     """
@@ -715,7 +722,13 @@ def read_mapping_file(map_file) -> [MappingInfo]:
                 pattern = row[0].strip()
                 payee = row[1].strip()
                 account = row[2].strip()
-                tags = row[3:]
+                if len(row) >= 4 and row[3].startswith("transfer_to="):
+                    transfer_to = row[3].split('=')[1].strip()
+                    tags = row[4:]
+                else:
+                    transfer_to = None
+                    tags = row[3:]
+
                 if pattern.startswith('/') and pattern.endswith('/'):
                     try:
                         pattern = re.compile(pattern[1:-1])
@@ -724,7 +737,7 @@ def read_mapping_file(map_file) -> [MappingInfo]:
                               .format(pattern, map_file, e),
                               file=sys.stderr)
                         sys.exit(1)
-                mappings.append(MappingInfo(pattern, payee, account, tags))
+                mappings.append(MappingInfo(pattern, payee, account, tags, transfer_to))
     return mappings
 
 
@@ -852,13 +865,14 @@ def main(options):
         payee = entry.desc
         account = options.default_expense
         tags = []
+        transfer_to = None
         found = False
         # Try to match entry desc with mappings patterns
         for m in mappings:
             pattern = m.pattern
             if isinstance(pattern, str):
                 if entry.desc == pattern:
-                    payee, account, tags = m.payee, m.account, m.tags
+                    payee, account, tags, transfer_to = m.payee, m.account, m.tags, m.transfer_to
                     found = True  # do not break here, later mapping must win
             else:
                 # If the pattern isn't a string it's a regex
@@ -869,7 +883,7 @@ def main(options):
                     # perform regexp substitution if captures were used
                     if match.groups():
                         payee = m.pattern.sub(m.payee, entry.desc)
-                    account, tags = m.account, m.tags
+                    account, tags, transfer_to = m.account, m.tags, m.transfer_to
                     found = True
 
         modified = False
@@ -910,7 +924,7 @@ def main(options):
             possible_payees.add(payee)
             possible_accounts.add(account)
 
-        return (payee, account, tags)
+        return (payee, account, tags, transfer_to)
 
     def process_input_output(in_file, out_file):
         """ Read CSV lines either from filename or stdin.
@@ -947,7 +961,7 @@ def main(options):
             pass
 
         bank_reader = csv.reader(csv_lines, dialect)
-
+        transaction_index = 0
         for i, row in enumerate(bank_reader):
             # Skip any empty lines in the input
             if len(row) == 0:
@@ -957,7 +971,7 @@ def main(options):
                           options)
 
             # detect duplicate entries in the ledger file and optionally skip or prompt user for action
-            #if options.skip_dupes and csv_lines[i].strip() in csv_comments:
+            # if options.skip_dupes and csv_lines[i].strip() in csv_comments:
             if (options.skip_older_than < 0) or (entry.days_old <= options.skip_older_than):
                 if options.clear_screen:
                     print('\033[2J\033[;H')
@@ -969,22 +983,23 @@ def main(options):
                         yn_response = prompt_for_value('Duplicate transaction detected, skip?', possible_yesno, 'Y')
                         if yn_response:
                             value = yn_response
-                    if value.upper().strip() not in ('N','NO'):
+                    if value.upper().strip() not in ('N', 'NO'):
                         continue
                 while True:
-                    payee, account, tags = get_payee_and_account(entry)
+                    payee, account, tags, transfer_to = get_payee_and_account(entry)
                     value = 'C'
                     if options.entry_review:
                         # need to display ledger formatted entry here
                         #
                         # request confirmation before committing transaction
                         print('\n' + 'Ledger Entry:')
-                        print(entry.journal_entry(i + 1, payee, account, tags))
-                        yn_response = prompt_for_value('Commit transaction (Commit, Modify, Skip)?', ('C','M','S'), value)
+                        print(entry.journal_entry(transaction_index + 1, payee, account, tags))
+                        yn_response = prompt_for_value('Commit transaction (Commit, Modify, Skip)?', ('C', 'M', 'S'),
+                                                       value)
                         if yn_response:
                             value = yn_response
-                    if value.upper().strip() not in ('C','COMMIT'):
-                        if value.upper().strip() in ('S','SKIP'):
+                    if value.upper().strip() not in ('C', 'COMMIT'):
+                        if value.upper().strip() in ('S', 'SKIP'):
                             break
                         else:
                             continue
@@ -992,10 +1007,15 @@ def main(options):
                         # add md5sum of new entry, this helps detect duplicate entries in same file
                         md5sum_hashes.add(entry.md5sum)
                         break
-                if value.upper().strip() in ('S','SKIP'):
+                if value.upper().strip() in ('S', 'SKIP'):
                     continue
 
-                yield entry.journal_entry(i + 1, payee, account, tags)
+                transaction_index += 1
+                yield entry.journal_entry(transaction_index, payee, account, tags)
+
+                if transfer_to is not None:
+                    transaction_index += 1
+                    yield entry.transfer_entry(transaction_index, payee, account, transfer_to, tags)
 
     try:
         process_input_output(options.infile, options.outfile)

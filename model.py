@@ -1,4 +1,4 @@
-from typing import AnyStr, Pattern
+from typing import AnyStr, Pattern, Optional
 
 from attr import dataclass
 
@@ -9,3 +9,4 @@ class MappingInfo:
     payee: str
     account: str
     tags: [str]
+    transfer_to: Optional[str]

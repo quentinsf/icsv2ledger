@@ -9,6 +9,7 @@ import argparse
 import csv
 import io
 import glob
+import mmap
 import sys
 import os
 import hashlib
@@ -17,11 +18,11 @@ import subprocess
 import readline
 import configparser
 from argparse import HelpFormatter
+from dataclasses import dataclass
 from datetime import datetime
 from operator import attrgetter
 from locale   import atof
-
-from model import MappingInfo
+from typing import AnyStr, Pattern, Optional
 
 
 class FileType(object):
@@ -468,6 +469,19 @@ def parse_args_and_config_file():
     return args
 
 
+@dataclass(frozen=True)
+class MappingInfo:
+    """
+    This represents one entry in the mapping file.
+    """
+    pattern: Pattern[AnyStr]
+    payee: str
+    account: str
+    tags: [str]
+    transfer_to: Optional[str]
+    transfer_to_file: Optional[str]
+
+
 class Entry:
     """
     This represents one entry in the CSV file.
@@ -863,13 +877,15 @@ def main(options):
         account = options.default_expense
         tags = []
         transfer_to = None
+        transfer_to_file = None
         found = False
         # Try to match entry desc with mappings patterns
         for m in mappings:
             pattern = m.pattern
             if isinstance(pattern, str):
                 if entry.desc == pattern:
-                    payee, account, tags, transfer_to = m.payee, m.account, m.tags, m.transfer_to
+                    payee, account, tags = m.payee, m.account, m.tags
+                    transfer_to, transfer_to_file = m.transfer_to, m.transfer_to_file
                     found = True  # do not break here, later mapping must win
             else:
                 # If the pattern isn't a string it's a regex
@@ -880,7 +896,8 @@ def main(options):
                     # perform regexp substitution if captures were used
                     if match.groups():
                         payee = m.pattern.sub(m.payee, entry.desc)
-                    account, tags, transfer_to = m.account, m.tags, m.transfer_to
+                    account, tags = m.account, m.tags
+                    transfer_to, transfer_to_file = m.transfer_to, m.transfer_to_file
                     found = True
 
         modified = False
@@ -911,9 +928,9 @@ def main(options):
                 yn_response = prompt_for_value('Append to mapping file?', possible_yesno, 'Y')
                 if yn_response:
                     value = yn_response
-            if value.upper().strip() not in ('N','NO'):
+            if value.upper().strip() not in ('N', 'NO'):
                 # Add new or changed mapping to mappings and append to file
-                mappings.append((entry.desc, payee, account, tags))
+                mappings.append(MappingInfo(entry.desc, payee, account, tags, None, None))
                 append_mapping_file(options.mapping_file,
                                 entry.desc, payee, account, tags)
 
@@ -921,7 +938,7 @@ def main(options):
             possible_payees.add(payee)
             possible_accounts.add(account)
 
-        return (payee, account, tags, transfer_to)
+        return (payee, account, tags, transfer_to, transfer_to_file)
 
     def process_input_output(in_file, out_file):
         """ Read CSV lines either from filename or stdin.
@@ -983,7 +1000,7 @@ def main(options):
                     if value.upper().strip() not in ('N', 'NO'):
                         continue
                 while True:
-                    payee, account, tags, transfer_to = get_payee_and_account(entry)
+                    payee, account, tags, transfer_to, transfer_to_file = get_payee_and_account(entry)
                     value = 'C'
                     if options.entry_review:
                         # need to display ledger formatted entry here
@@ -1012,7 +1029,21 @@ def main(options):
 
                 if transfer_to is not None:
                     transaction_index += 1
-                    yield entry.transfer_entry(transaction_index, payee, account, transfer_to, tags)
+                    transfer_entry = entry.transfer_entry(transaction_index, payee, account, transfer_to, tags)
+                    if transfer_to_file is None:
+                        yield transfer_entry
+                    else:
+                        with open(transfer_to_file, "rb") as f:
+                            if f.read(1):
+                                with mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ) as s:
+                                    has_entry = s.find(bytes(entry.md5sum, 'utf-8')) != -1
+                            else:
+                                has_entry = False
+
+                        if not has_entry or not options.skip_dupes:
+                            with open(transfer_to_file, "a") as f:
+                                f.write(transfer_entry)
+                                f.write("\n")
 
     try:
         process_input_output(options.infile, options.outfile)

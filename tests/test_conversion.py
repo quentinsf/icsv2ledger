@@ -40,6 +40,35 @@ class TestLocationService(unittest.TestCase):
 """
         )
 
+    def test_simple_parsing_another_format(self):
+        infile = open('stubs/simple_2.csv')
+        out = StringIO()
+
+        args = parse_args_and_config_file()
+        args.quiet = True
+        args.infile = infile
+        args.outfile = out
+        args.csv_date_format = "%d %b %Y"
+        args.ledger_date_format= "%Y/%m/%d"
+        args.skip_lines = 0
+        args.debit = 3
+        args.credit = 4
+        args.delimiter = ';'
+        args.mapping_file = 'stubs/simple_mapping.txt'
+        main(args)
+
+        infile.close()
+
+        self.assertEqual(
+            out.getvalue(), """2018/12/10 * Unknown Transfer
+    ; MD5Sum: 5c3d6f20c79b6ba0760c43c3b9c9be47
+    ; CSV: 10 Dec 2018 ; To John Doe  ; 20.75 ;  ;  ;  ; 48.35; transfers; Bob + coffee+groceries :)
+    Expenses:Unknown                                                 20.75
+    Assets:Bank:Current
+
+"""
+        )
+
     def test_tag_mapping(self):
         result = read_mapping_file('stubs/tag_mapping.txt')
 

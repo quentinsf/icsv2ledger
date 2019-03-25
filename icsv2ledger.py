@@ -9,6 +9,7 @@ import argparse
 import csv
 import io
 import glob
+import mmap
 import sys
 import os
 import hashlib
@@ -17,9 +18,11 @@ import subprocess
 import readline
 import configparser
 from argparse import HelpFormatter
+from dataclasses import dataclass
 from datetime import datetime
 from operator import attrgetter
 from locale   import atof
+from typing import AnyStr, Pattern, Optional
 
 
 class FileType(object):
@@ -214,13 +217,13 @@ def parse_args_and_config_file():
                   file=sys.stderr)
             sys.exit(1)
         defaults = dict(config.items(args.account))
-        
+
         if defaults['src_account']:
             print('Section {0} in config file {1} contains command line only option src_account'
                   .format(args.account, args.config_file),
                   file=sys.stderr)
             sys.exit(1)
-            
+
         defaults['addons'] = {}
         if config.has_section(args.account + '_addons'):
             for item in config.items(args.account + '_addons'):
@@ -459,11 +462,24 @@ def parse_args_and_config_file():
               file=sys.stderr)
         sys.exit(1)
 
-    if args.encoding != args.infile.encoding:
+    if args.encoding.lower() != args.infile.encoding.lower():
         args.infile = io.TextIOWrapper(args.infile.detach(),
                                        encoding=args.encoding)
 
     return args
+
+
+@dataclass(frozen=True)
+class MappingInfo:
+    """
+    This represents one entry in the mapping file.
+    """
+    pattern: Pattern[AnyStr]
+    payee: str
+    account: str
+    tags: [str]
+    transfer_to: Optional[str]
+    transfer_to_file: Optional[str]
 
 
 class Entry:
@@ -525,7 +541,7 @@ class Entry:
         self.credit_account = options.account
         if options.src_account:
             self.credit_account = options.src_account
-        
+
         self.currency = options.currency
         self.credit_currency = getattr(
             options, 'credit_currency', self.currency)
@@ -553,7 +569,7 @@ class Entry:
             self.desc,
             self.credit if self.credit else "-" + self.debit)
 
-    def journal_entry(self, transaction_index, payee, account, tags):
+    def _build_entry_str(self, transaction_index, payee, credit_account, debit_account, tags) -> str:
         """
         Return a formatted journal entry recording this Entry against
         the specified Ledger account
@@ -565,7 +581,7 @@ class Entry:
         if uuid:
             uuid = uuid[0]
             tags.remove(uuid)
-            
+
         # format tags to proper ganged string for ledger
         if self.options.multiline_tags:
             tags_separator = '\n    ; '
@@ -575,7 +591,7 @@ class Entry:
             tags = '; ' + tags_separator.join(tags).replace('::', ':')
         else:
             tags = ''
-        
+
         format_data = {
             'date': self.date,
             'effective_date': self.effective_date,
@@ -585,11 +601,11 @@ class Entry:
 
             'uuid': uuid,
 
-            'debit_account': account,
+            'debit_account': debit_account,
             'debit_currency': self.currency if self.debit else "",
             'debit': self.debit,
 
-            'credit_account': self.credit_account,
+            'credit_account': credit_account,
             'credit_currency': self.credit_currency if self.credit else "",
             'credit': self.credit,
 
@@ -603,6 +619,13 @@ class Entry:
         output = '\n'.join([x.rstrip() for x in output_lines if x.strip()]) + '\n'
 
         return output
+
+    def journal_entry(self, transaction_index, payee, debit_account, tags):
+        return self._build_entry_str(transaction_index, payee, self.credit_account, debit_account, tags)
+
+    def transfer_entry(self, transaction_index, payee, account, transfer_to, tags):
+        return self._build_entry_str(transaction_index, payee, account, transfer_to, tags)
+
 
 def get_field_at_index(fields, index, csv_decimal_comma, ledger_decimal_comma):
     """
@@ -695,7 +718,7 @@ def from_ledger(ledger_file, ledger_binary_file, command):
         raise FileNotFoundError('The system can\'t find the following ledger binary: {0}'.format(ledger))
 
 
-def read_mapping_file(map_file):
+def read_mapping_file(map_file) -> [MappingInfo]:
     """
     Mappings are simply a CSV file with three columns.
     The first is a string to be matched against an entry description.
@@ -709,11 +732,14 @@ def read_mapping_file(map_file):
     with open(map_file, "r", encoding='utf-8', newline='') as f:
         map_reader = csv.reader(f)
         for row in map_reader:
-            if len(row) > 1:
+            if len(row) > 2:
                 pattern = row[0].strip()
                 payee = row[1].strip()
                 account = row[2].strip()
-                tags = row[3:]
+                tags = [col for col in row[3:] if not col.startswith(("transfer_to", "file"))]
+                transfer_to = row[3].split('=')[1].strip() if ''.join(row[3:]).startswith("transfer_to=") else None
+                transfer_to_file = row[4].split('=')[1].strip() if ''.join(row[4:]).startswith("file=") else None
+
                 if pattern.startswith('/') and pattern.endswith('/'):
                     try:
                         pattern = re.compile(pattern[1:-1])
@@ -722,7 +748,7 @@ def read_mapping_file(map_file):
                               .format(pattern, map_file, e),
                               file=sys.stderr)
                         sys.exit(1)
-                mappings.append((pattern, payee, account, tags))
+                mappings.append(MappingInfo(pattern, payee, account, tags, transfer_to, transfer_to_file))
     return mappings
 
 
@@ -816,11 +842,10 @@ def reset_stdin():
         sys.exit(1)
 
 
-def main():
+def main(options):
 
-    options = parse_args_and_config_file()
     # Define responses to yes/no prompts
-    possible_yesno = set(['Y','N'])
+    possible_yesno = {'Y', 'N'}
 
     # Get list of accounts and payees from Ledger specified file
     possible_accounts = set([])
@@ -843,32 +868,36 @@ def main():
 
     # Add to possible values the ones from mappings
     for m in mappings:
-        possible_payees.add(m[1])
-        possible_accounts.add(m[2])
-        possible_tags.update(set(m[3]))
+        possible_payees.add(m.payee)
+        possible_accounts.add(m.account)
+        possible_tags.update(set(m.tags))
 
     def get_payee_and_account(entry):
         payee = entry.desc
         account = options.default_expense
         tags = []
+        transfer_to = None
+        transfer_to_file = None
         found = False
         # Try to match entry desc with mappings patterns
         for m in mappings:
-            pattern = m[0]
+            pattern = m.pattern
             if isinstance(pattern, str):
                 if entry.desc == pattern:
-                    payee, account, tags = m[1], m[2], m[3]
+                    payee, account, tags = m.payee, m.account, m.tags
+                    transfer_to, transfer_to_file = m.transfer_to, m.transfer_to_file
                     found = True  # do not break here, later mapping must win
             else:
                 # If the pattern isn't a string it's a regex
-                match = m[0].match(entry.desc)
+                match = m.pattern.match(entry.desc)
                 if match:
                 #if m[0].match(entry.desc):
-                    payee = m[1]
+                    payee = m.payee
                     # perform regexp substitution if captures were used
                     if match.groups():
-                        payee = m[0].sub(m[1],entry.desc)
-                    account, tags = m[2], m[3]
+                        payee = m.pattern.sub(m.payee, entry.desc)
+                    account, tags = m.account, m.tags
+                    transfer_to, transfer_to_file = m.transfer_to, m.transfer_to_file
                     found = True
 
         modified = False
@@ -899,9 +928,9 @@ def main():
                 yn_response = prompt_for_value('Append to mapping file?', possible_yesno, 'Y')
                 if yn_response:
                     value = yn_response
-            if value.upper().strip() not in ('N','NO'):
+            if value.upper().strip() not in ('N', 'NO'):
                 # Add new or changed mapping to mappings and append to file
-                mappings.append((entry.desc, payee, account, tags))
+                mappings.append(MappingInfo(entry.desc, payee, account, tags, None, None))
                 append_mapping_file(options.mapping_file,
                                 entry.desc, payee, account, tags)
 
@@ -909,7 +938,7 @@ def main():
             possible_payees.add(payee)
             possible_accounts.add(account)
 
-        return (payee, account, tags)
+        return (payee, account, tags, transfer_to, transfer_to_file)
 
     def process_input_output(in_file, out_file):
         """ Read CSV lines either from filename or stdin.
@@ -946,7 +975,7 @@ def main():
             pass
 
         bank_reader = csv.reader(csv_lines, dialect)
-
+        transaction_index = 0
         for i, row in enumerate(bank_reader):
             # Skip any empty lines in the input
             if len(row) == 0:
@@ -956,7 +985,7 @@ def main():
                           options)
 
             # detect duplicate entries in the ledger file and optionally skip or prompt user for action
-            #if options.skip_dupes and csv_lines[i].strip() in csv_comments:
+            # if options.skip_dupes and csv_lines[i].strip() in csv_comments:
             if (options.skip_older_than < 0) or (entry.days_old <= options.skip_older_than):
                 if options.clear_screen:
                     print('\033[2J\033[;H')
@@ -968,22 +997,23 @@ def main():
                         yn_response = prompt_for_value('Duplicate transaction detected, skip?', possible_yesno, 'Y')
                         if yn_response:
                             value = yn_response
-                    if value.upper().strip() not in ('N','NO'):
+                    if value.upper().strip() not in ('N', 'NO'):
                         continue
                 while True:
-                    payee, account, tags = get_payee_and_account(entry)
+                    payee, account, tags, transfer_to, transfer_to_file = get_payee_and_account(entry)
                     value = 'C'
                     if options.entry_review:
                         # need to display ledger formatted entry here
                         #
                         # request confirmation before committing transaction
                         print('\n' + 'Ledger Entry:')
-                        print(entry.journal_entry(i + 1, payee, account, tags))
-                        yn_response = prompt_for_value('Commit transaction (Commit, Modify, Skip)?', ('C','M','S'), value)
+                        print(entry.journal_entry(transaction_index + 1, payee, account, tags))
+                        yn_response = prompt_for_value('Commit transaction (Commit, Modify, Skip)?', ('C', 'M', 'S'),
+                                                       value)
                         if yn_response:
                             value = yn_response
-                    if value.upper().strip() not in ('C','COMMIT'):
-                        if value.upper().strip() in ('S','SKIP'):
+                    if value.upper().strip() not in ('C', 'COMMIT'):
+                        if value.upper().strip() in ('S', 'SKIP'):
                             break
                         else:
                             continue
@@ -991,10 +1021,29 @@ def main():
                         # add md5sum of new entry, this helps detect duplicate entries in same file
                         md5sum_hashes.add(entry.md5sum)
                         break
-                if value.upper().strip() in ('S','SKIP'):
+                if value.upper().strip() in ('S', 'SKIP'):
                     continue
 
-                yield entry.journal_entry(i + 1, payee, account, tags)
+                transaction_index += 1
+                yield entry.journal_entry(transaction_index, payee, account, tags)
+
+                if transfer_to is not None:
+                    transaction_index += 1
+                    transfer_entry = entry.transfer_entry(transaction_index, payee, account, transfer_to, tags)
+                    if transfer_to_file is None:
+                        yield transfer_entry
+                    else:
+                        with open(transfer_to_file, "rb") as f:
+                            if f.read(1):
+                                with mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ) as s:
+                                    has_entry = s.find(bytes(entry.md5sum, 'utf-8')) != -1
+                            else:
+                                has_entry = False
+
+                        if not has_entry or not options.skip_dupes:
+                            with open(transfer_to_file, "a") as f:
+                                f.write(transfer_entry)
+                                f.write("\n")
 
     try:
         process_input_output(options.infile, options.outfile)
@@ -1004,6 +1053,7 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    options = parse_args_and_config_file()
+    main(options)
 
 # vim: ts=4 sw=4 et

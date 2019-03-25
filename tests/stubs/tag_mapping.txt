@@ -1,0 +1,2 @@
+CREDIT CARD 15/12/2018 MY RESTAURANT,My Restaurant,Expenses:Dining
+TRANSFER RECEIVED MR UNKNOWN,Unknown Transfer,Income:Unknown,tag1,tag2

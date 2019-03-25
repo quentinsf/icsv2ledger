@@ -1,0 +1,3 @@
+/.*MY RESTAURANT/,My Restaurant,Expenses:Dining
+TRANSFER RECEIVED MR UNKNOWN,Unknown Transfer,Income:Unknown
+TRANSFER SENT SAVINGS ACC,Savings,Transfers:Savings,transfer_to=Assets:Bank:Savings

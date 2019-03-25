@@ -1,0 +1,24 @@
+15/03/2019 * My Restaurant
+    ; MD5Sum: ade6e00119fe2b145ecddb30e50e2d4c
+    ; CSV: 15/03/2019;CREDIT CARD 15/12/2018 MY RESTAURANT;;-92,90;EUR
+    Expenses:Dining
+    Assets:Bank:Current                                              -92.90
+
+16/03/2019 * Unknown Transfer
+    ; MD5Sum: 2313495c75e0d4794c1f445d585f34c4
+    ; CSV: 16/03/2019;TRANSFER RECEIVED MR UNKNOWN;;250,73;EUR
+    Income:Unknown
+    Assets:Bank:Current                                              250.73
+
+17/03/2019 * Savings
+    ; MD5Sum: f16676d80071cd9f5fc0a6db3387717a
+    ; CSV: 17/03/2019;TRANSFER SENT SAVINGS ACC;;-100,00;EUR
+    Transfers:Savings
+    Assets:Bank:Current                                              -100.00
+
+17/03/2019 * Savings
+    ; MD5Sum: f16676d80071cd9f5fc0a6db3387717a
+    ; CSV: 17/03/2019;TRANSFER SENT SAVINGS ACC;;-100,00;EUR
+    Assets:Bank:Savings
+    Transfers:Savings                                                -100.00
+

@@ -487,7 +487,7 @@ class Entry:
             self.addons = dict()
 
         # Get the date and convert it into a ledger formatted date.
-        self.date = fields[options.date - 1]
+        self.date = fields[options.date - 1].strip()
         entry_date = datetime.strptime(self.date, options.csv_date_format)
         if options.ledger_date_format:
             if options.ledger_date_format != options.csv_date_format:

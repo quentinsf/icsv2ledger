@@ -1052,8 +1052,12 @@ def main(options):
         sys.exit(0)
 
 
-if __name__ == "__main__":
+def cli():
     options = parse_args_and_config_file()
     main(options)
+
+
+if __name__ == "__main__":
+    cli()
 
 # vim: ts=4 sw=4 et

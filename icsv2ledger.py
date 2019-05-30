@@ -945,7 +945,7 @@ def main(options):
         Process them.
         Write Ledger lines either to filename or stdout.
         """
-        if not options.incremental:
+        if not options.incremental and not out_file == sys.stdout:
             out_file.truncate(0)
 
         csv_lines = get_csv_lines(in_file)

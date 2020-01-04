@@ -879,17 +879,19 @@ def main(options):
         transfer_to = None
         transfer_to_file = None
         found = False
-        # Try to match entry desc with mappings patterns
+        # Try to match entry desc or entry addons with mappings patterns
         for m in mappings:
             pattern = m.pattern
             if isinstance(pattern, str):
-                if entry.desc == pattern:
+                if entry.desc == pattern or pattern in list(entry.addons.values()):
                     payee, account, tags = m.payee, m.account, m.tags
                     transfer_to, transfer_to_file = m.transfer_to, m.transfer_to_file
                     found = True  # do not break here, later mapping must win
             else:
                 # If the pattern isn't a string it's a regex
-                match = m.pattern.match(entry.desc)
+                match_desc = m.pattern.match(entry.desc)
+                match_addons = m.pattern.match(" ".join(entry.addons.values()))
+                match = match_desc if match_desc else match_addons
                 if match:
                 #if m[0].match(entry.desc):
                     payee = m.payee

@@ -445,13 +445,13 @@ double-entry pattern.
 In the example above for the Transfers:Savings account with the transfer_to=Assets:Savings
 would create the following entries:
 
-2012/01/01 Transfer to Savings
- Transfers:Savings  $100
- Assets:Checking
+    2012/01/01 Transfer to Savings
+      Transfers:Savings  $100
+      Assets:Checking
 
-2012/01/01 Transfer to Savings
- Assets:Savings  $100
- Transfers:Savings
+    2012/01/01 Transfer to Savings
+      Assets:Savings  $100
+      Transfers:Savings
 
 You can additionally add a `file=` value after `transfer_to=` to write the second entry in another file.
 This is useful if you split your accounts per file and want to write the first transaction in the checking file

@@ -105,6 +105,7 @@ DEFAULTS = dotdict({
     'skip_lines': str(1),
     'skip_dupes': False,
     'confirm_dupes': False,
+    'depreciated_md5': False,
     'incremental': False,
     'tags': False,
     'multiline_tags': False,
@@ -306,6 +307,11 @@ def parse_args_and_config_file():
         action='store_true',
         help=('detect and interactively skip transactions that have already been imported'
               ' (default: {0})'.format(DEFAULTS.confirm_dupes)))
+    parser.add_argument(
+        '--depreciated-md5',
+        action='store_true',
+        help=('augment duplicate transaction detection to pick-up depreciated MD5 hashes'
+              ' (default: {0})'.format(DEFAULTS.depreciated_md5)))
     parser.add_argument(
         '--incremental',
         action='store_true',
@@ -557,6 +563,10 @@ class Entry:
 
         # We record this and use it to avoid duplication, including the source account to avoid false-positives.
         self.md5sum = hashlib.md5(','.join(x.strip() for x in (self.raw_csv,self.credit_account)).encode('utf-8')).hexdigest()
+        if self.options.depreciated_md5:
+            self.depreciated_md5sums = set()
+            self.depreciated_md5sums.add(hashlib.md5(self.raw_csv.encode('utf-8')).hexdigest())
+            self.depreciated_md5sums.add(hashlib.md5(','.join(x.strip() for x in (self.date,self.desc,self.credit,self.debit,self.credit_account)).encode('utf-8')).hexdigest())
 
     def prompt(self):
         """
@@ -989,7 +999,9 @@ def main(options):
                 if options.clear_screen:
                     print('\033[2J\033[;H')
                 print('\n' + entry.prompt())
-                if (options.skip_dupes or options.confirm_dupes) and entry.md5sum in md5sum_hashes:
+                if (options.skip_dupes or options.confirm_dupes) and \
+                     (entry.md5sum in md5sum_hashes or
+                     (options.depreciated_md5 and entry.depreciated_md5sums.intersection(set(md5sum_hashes)))):
                     value = 'Y'
                     # if interactive flag was passed prompt user before skipping transaction
                     if options.confirm_dupes:

@@ -26,13 +26,13 @@ class TestLocationService(unittest.TestCase):
 
         self.assertEqual(
             out.getvalue(), """15/03/2019 * My Restaurant
-    ; MD5Sum: ade6e00119fe2b145ecddb30e50e2d4c
+    ; MD5Sum: ae5107b79f9e314ff434bffea8485136
     ; CSV: 15/03/2019;CREDIT CARD 15/12/2018 MY RESTAURANT;;-92,90;EUR
     Expenses:Dining
     Assets:Bank:Current                                              -92.90
 
 16/03/2019 * Unknown Transfer
-    ; MD5Sum: 2313495c75e0d4794c1f445d585f34c4
+    ; MD5Sum: 5db6ba322210ab10f22662caf208b571
     ; CSV: 16/03/2019;TRANSFER RECEIVED MR UNKNOWN;;250,73;EUR
     Income:Unknown
     Assets:Bank:Current                                              250.73
@@ -61,7 +61,7 @@ class TestLocationService(unittest.TestCase):
 
         self.assertEqual(
             out.getvalue(), """2018/12/10 * Unknown Transfer
-    ; MD5Sum: 5c3d6f20c79b6ba0760c43c3b9c9be47
+    ; MD5Sum: df063bb50d2de83e633e976edd1e5688
     ; CSV: 10 Dec 2018 ; To John Doe  ; 20.75 ;  ;  ;  ; 48.35; transfers; Bob + coffee+groceries :)
     Expenses:Unknown                                                 20.75
     Assets:Bank:Current
@@ -109,31 +109,31 @@ class TestLocationService(unittest.TestCase):
         infile.close()
 
         self.assertEqual(out.getvalue(), """15/03/2019 * My Restaurant
-    ; MD5Sum: ade6e00119fe2b145ecddb30e50e2d4c
+    ; MD5Sum: ae5107b79f9e314ff434bffea8485136
     ; CSV: 15/03/2019;CREDIT CARD 15/12/2018 MY RESTAURANT;;-92,90;EUR
     Expenses:Dining
     Assets:Bank:Current                                              -92.90
 
 16/03/2019 * Unknown Transfer
-    ; MD5Sum: 2313495c75e0d4794c1f445d585f34c4
+    ; MD5Sum: 5db6ba322210ab10f22662caf208b571
     ; CSV: 16/03/2019;TRANSFER RECEIVED MR UNKNOWN;;250,73;EUR
     Income:Unknown
     Assets:Bank:Current                                              250.73
 
 17/03/2019 * Savings
-    ; MD5Sum: f16676d80071cd9f5fc0a6db3387717a
+    ; MD5Sum: 1b64b0eae41356831145b328132a9a44
     ; CSV: 17/03/2019;TRANSFER SENT SAVINGS ACC;;-100,00;EUR
     Transfers:Savings
     Assets:Bank:Current                                              -100.00
 
 17/03/2019 * Savings
-    ; MD5Sum: f16676d80071cd9f5fc0a6db3387717a
+    ; MD5Sum: 1b64b0eae41356831145b328132a9a44
     ; CSV: 17/03/2019;TRANSFER SENT SAVINGS ACC;;-100,00;EUR
     Assets:Bank:Savings
     Transfers:Savings                                                -100.00
 
 17/03/2019 * My Restaurant
-    ; MD5Sum: 6b8159889e4f408c39dd85f19e3eab1a
+    ; MD5Sum: 4b780786ee44c6a55b2140ef7251c221
     ; CSV: 17/03/2019;CREDIT CARD 17/12/2018 MY RESTAURANT;;-80,50;EUR
     Expenses:Dining
     Assets:Bank:Current                                              -80.50
@@ -161,7 +161,7 @@ class TestLocationService(unittest.TestCase):
         infile.close()
 
         self.assertEqual(out.getvalue(), """17/03/2019 * My Restaurant
-    ; MD5Sum: 6b8159889e4f408c39dd85f19e3eab1a
+    ; MD5Sum: 4b780786ee44c6a55b2140ef7251c221
     ; CSV: 17/03/2019;CREDIT CARD 17/12/2018 MY RESTAURANT;;-80,50;EUR
     Expenses:Dining
     Assets:Bank:Current                                              -80.50

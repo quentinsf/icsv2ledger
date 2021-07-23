@@ -78,6 +78,7 @@ Options can either be used from command line or in configuration file.
     --default-expense STR
                           ledger account used as destination
     --delimiter           CSV delimiter
+    --depreciated-md5     augment duplicate transaction detection to pick-up depreciated MD5 hashes
     --desc STR            CSV column number matching description
     --effective-date INT  CSV column number matching effective date
     --encoding STR        text encoding of CSV input file
@@ -307,11 +308,19 @@ will print ledger entries in reverse of their order in the CSV file.
 
 **`--skip-dupes`**
 
-will attempt to detect duplicate transactions in ledger file by comparing MD5Sum of transactions.  The MD5Sum is calculated from the raw CSV string, with the source account appended to avoid false positives on generic transaction descriptions when the source account is different and thus should not be considered a duplicate. MD5Sum of existing transactions are included as a `; MD5Sum: ...` comment in the current ledger file (which means your output template will need this comment). This can help if you download statements without using a precise date range. A useful pattern is to include MD5Sum comments for both "sides" of a transaction if you download from multiple sources that resolve to a single transaction (e.g. paying a credit card from checking).  Note: use of this flag by itself will detect and skip duplicate entries automatically with no interaction from user.  If you want to be prompted and determine whether to skip or not see `--confirm-dupes`.
+will attempt to detect duplicate transactions in ledger file by comparing MD5Sum of transactions.  The MD5Sum is calculated from the raw CSV string, with the source account appended to avoid false positives on generic transaction descriptions when the source account is different and thus should not be considered a duplicate. MD5Sum of existing transactions are included as a `; MD5Sum: ...` comment in the current ledger file (which means your output template will need this comment). This can help if you download statements without using a precise date range. A useful pattern is to include MD5Sum comments for both "sides" of a transaction if you download from multiple sources that resolve to a single transaction (e.g. paying a credit card from checking).
+
+The elements that are hashed have changed over time; if you'd like to check for all possible hashes (inc. those created via older versions of icsv2ledger), see `--depreciated-md5`.
+
+Use of this flag by itself will detect and skip duplicate entries automatically with no interaction from user.  If you want to be prompted and determine whether to skip or not see `--confirm-dupes`.
 
 **`--confirm-dupes`**
 
 same as `--skip-dupes` but will prompt user to indicate if they want the detected duplicate entry to be skipped or treated as a valid entry.  This is useful when importing transactions that commonly contain generic descriptions.
+
+**`--depreciated-md5`**
+
+will enable the detection of duplicate transactions via depreciated MD5 hashes (it was originally a hash of the input CSV line, and then of the parsed form, and now a hybrid of the two).
 
 **`--skip-lines INT`**
 

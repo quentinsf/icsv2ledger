@@ -108,7 +108,13 @@ class TestLocationService(unittest.TestCase):
 
         infile.close()
 
-        self.assertEqual(out.getvalue(), """15/03/2019 * My Restaurant
+        self.assertEqual(out.getvalue(), """14/02/2018 * My Restaurant
+    ; MD5Sum: 3f76b0324977365db577ddb7d80ca50b
+    ; CSV: 14/02/2018;CREDIT CARD 14/12/2017 MY RESTAURANT;;-30,60;EUR
+    Expenses:Dining
+    Assets:Bank:Current                                              -30.60
+
+15/03/2019 * My Restaurant
     ; MD5Sum: ae5107b79f9e314ff434bffea8485136
     ; CSV: 15/03/2019;CREDIT CARD 15/12/2018 MY RESTAURANT;;-92,90;EUR
     Expenses:Dining
@@ -156,6 +162,41 @@ class TestLocationService(unittest.TestCase):
         args.ledger_file = 'stubs/parsed_transfer.txt'
         args.skip_dupes = True
         args.mapping_file = 'stubs/transfer_mapping.txt'
+        main(args)
+
+        infile.close()
+
+        self.assertEqual(out.getvalue(), """14/02/2018 * My Restaurant
+    ; MD5Sum: 3f76b0324977365db577ddb7d80ca50b
+    ; CSV: 14/02/2018;CREDIT CARD 14/12/2017 MY RESTAURANT;;-30,60;EUR
+    Expenses:Dining
+    Assets:Bank:Current                                              -30.60
+
+17/03/2019 * My Restaurant
+    ; MD5Sum: 4b780786ee44c6a55b2140ef7251c221
+    ; CSV: 17/03/2019;CREDIT CARD 17/12/2018 MY RESTAURANT;;-80,50;EUR
+    Expenses:Dining
+    Assets:Bank:Current                                              -80.50
+
+""")
+
+    def test_transfer_parsing_depreciated_duplicates(self):
+        infile = open('stubs/transfer.csv')
+        out = StringIO()
+
+        args = parse_args_and_config_file()
+        args.quiet = True
+        args.infile = infile
+        args.outfile = out
+        args.csv_date_format = "%d/%m/%Y"
+        args.skip_lines = 0
+        args.debit = 0
+        args.delimiter = ';'
+        args.csv_decimal_comma = True
+        args.ledger_file = 'stubs/parsed_transfer.txt'
+        args.skip_dupes = True
+        args.mapping_file = 'stubs/transfer_mapping.txt'
+        args.depreciated_md5 = True
         main(args)
 
         infile.close()

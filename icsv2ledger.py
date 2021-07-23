@@ -1001,7 +1001,7 @@ def main(options):
                 print('\n' + entry.prompt())
                 if (options.skip_dupes or options.confirm_dupes) and \
                      (entry.md5sum in md5sum_hashes or
-                     (options.depreciated_md5 and entry.depreciated_md5sums.intersection(set(md5sum_hashes)))):
+                     (options.depreciated_md5 and entry.depreciated_md5sums.intersection(md5sum_hashes))):
                     value = 'Y'
                     # if interactive flag was passed prompt user before skipping transaction
                     if options.confirm_dupes:

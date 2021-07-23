@@ -555,9 +555,8 @@ class Entry:
 
         self.raw_csv = raw_csv.strip()
 
-        # We also record this - in future we may use it to avoid duplication
-        #self.md5sum = hashlib.md5(self.raw_csv.encode('utf-8')).hexdigest()
-        self.md5sum = hashlib.md5(','.join(x.strip() for x in (self.date,self.desc,self.credit,self.debit,self.credit_account)).encode('utf-8')).hexdigest()
+        # We record this and use it to avoid duplication, including the source account to avoid false-positives.
+        self.md5sum = hashlib.md5(','.join(x.strip() for x in (self.raw_csv,self.credit_account)).encode('utf-8')).hexdigest()
 
     def prompt(self):
         """

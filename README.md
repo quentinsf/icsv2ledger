@@ -78,6 +78,7 @@ Options can either be used from command line or in configuration file.
     --default-expense STR
                           ledger account used as destination
     --delimiter           CSV delimiter
+    --depreciated-md5     augment duplicate transaction detection to pick-up depreciated MD5 hashes
     --desc STR            CSV column number matching description
     --effective-date INT  CSV column number matching effective date
     --encoding STR        text encoding of CSV input file
@@ -312,6 +313,10 @@ will attempt to detect duplicate transactions in ledger file by comparing MD5Sum
 **`--confirm-dupes`**
 
 same as `--skip-dupes` but will prompt user to indicate if they want the detected duplicate entry to be skipped or treated as a valid entry.  This is useful when importing transactions that commonly contain generic descriptions.
+
+**`--depreciated-md5`**
+
+will enable the detection of duplicate transactions via depreciated MD5 hashes (it was originally a hash of the input CSV line, and then of the parsed form, and now a hybrid of the two).
 
 **`--skip-lines INT`**
 

@@ -29,9 +29,3 @@
     Transfers:Savings
     Assets:Bank:Current                                              -100.00
 
-17/03/2019 * Savings
-    ; MD5Sum: 1b64b0eae41356831145b328132a9a44
-    ; CSV: 17/03/2019;TRANSFER SENT SAVINGS ACC;;-100,00;EUR
-    Assets:Bank:Savings
-    Transfers:Savings                                                -100.00
-

@@ -1,24 +1,31 @@
+;; This file is used as an existing ledger for duplicate-transaction
+;; tests against 'transfer.csv'.
+
+;; The first transaction uses a depreciated MD5Sum for testing the
+;; '--depreciated-md5' flag, and the last transaction has been removed
+;; to aid in testing duplicate-detection over those that remain.
+
+14/02/2018 * My Restaurant
+    ; MD5Sum: 676eeec60ab327a0a765b93c2e7a81f8
+    ; CSV: 14/02/2018;CREDIT CARD 14/12/2017 MY RESTAURANT;;-30,60;EUR
+    Expenses:Dining
+    Assets:Bank:Current                                              -30.60
+
 15/03/2019 * My Restaurant
-    ; MD5Sum: ade6e00119fe2b145ecddb30e50e2d4c
+    ; MD5Sum: ae5107b79f9e314ff434bffea8485136
     ; CSV: 15/03/2019;CREDIT CARD 15/12/2018 MY RESTAURANT;;-92,90;EUR
     Expenses:Dining
     Assets:Bank:Current                                              -92.90
 
 16/03/2019 * Unknown Transfer
-    ; MD5Sum: 2313495c75e0d4794c1f445d585f34c4
+    ; MD5Sum: 5db6ba322210ab10f22662caf208b571
     ; CSV: 16/03/2019;TRANSFER RECEIVED MR UNKNOWN;;250,73;EUR
     Income:Unknown
     Assets:Bank:Current                                              250.73
 
 17/03/2019 * Savings
-    ; MD5Sum: f16676d80071cd9f5fc0a6db3387717a
+    ; MD5Sum: 1b64b0eae41356831145b328132a9a44
     ; CSV: 17/03/2019;TRANSFER SENT SAVINGS ACC;;-100,00;EUR
     Transfers:Savings
     Assets:Bank:Current                                              -100.00
-
-17/03/2019 * Savings
-    ; MD5Sum: f16676d80071cd9f5fc0a6db3387717a
-    ; CSV: 17/03/2019;TRANSFER SENT SAVINGS ACC;;-100,00;EUR
-    Assets:Bank:Savings
-    Transfers:Savings                                                -100.00
 

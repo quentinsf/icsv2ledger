@@ -23,6 +23,7 @@ from datetime import datetime
 from operator import attrgetter
 from locale   import atof
 from typing import AnyStr, Pattern, Optional
+from itertools import chain
 
 
 class FileType(object):
@@ -116,9 +117,12 @@ DEFAULTS = dotdict({
     'entry_review': False})
 
 FILE_DEFAULTS = dotdict({
-    'config_file': [
-        os.path.join('.', '.icsv2ledgerrc'),
-        os.path.join(os.path.expanduser('~'), '.icsv2ledgerrc')],
+    # Re-phrased into Bash for clarity, this list comprehension
+    # generates: {'./',"$HOME/"}.icsv2ledgerrc{'','.yaml','.yml'}
+    'config_file': (list(chain.from_iterable([
+        [os.path.join(root, '.icsv2ledgerrc') + suffix
+            for suffix in ['', '.yaml', '.yml']]
+                for root in ['.', os.path.expanduser('~')]]))),
     'ledger_file': [
         os.path.join('.', '.ledger'),
         os.path.join(os.path.expanduser('~'), '.ledger')],
@@ -210,7 +214,29 @@ def parse_args_and_config_file():
     if args.config_file and ('-h' not in remaining_argv and
                              '--help' not in remaining_argv):
         config = configparser.RawConfigParser(DEFAULTS)
-        config.read(args.config_file)
+
+        # For YAML files
+        if args.config_file.endswith(('.yaml', '.yml')):
+            with open(args.config_file, 'r') as stream:
+                try:
+                    from yaml import safe_load, YAMLError
+                    result=safe_load(stream)
+                    config.read_dict(result)
+                except (ImportError, ModuleNotFoundError) as exc:
+                    print(exc)
+                    print("\nYAML config provided, but PyYAML could not be imported.\n"
+                          "Please ensure it has been installed (eg. via pip):\n"
+                          "    pip install PyYAML")
+                    sys.exit(1)
+                except YAMLError as exc:
+                    print("\nYAML configuration error:\n")
+                    print(exc)
+                    sys.exit(1)
+
+        # For configparser files
+        else:
+            config.read(args.config_file)
+
         if not config.has_section(args.account):
             print('Config file {0} does not contain section {1}'
                   .format(args.config_file, args.account),

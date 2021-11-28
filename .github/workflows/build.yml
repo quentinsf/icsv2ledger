@@ -1,0 +1,14 @@
+name: Build
+
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container: python:3.8
+    steps:
+    - uses: actions/checkout@v2
+    - run: apt update
+    - run: apt install ledger -y
+    - run: pip install -r requirements.txt
+    - run: make

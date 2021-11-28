@@ -1,0 +1,8 @@
+flake8
+ipdb
+ipython
+isort
+pip-tools
+pytest
+pytest-icdiff
+yapf

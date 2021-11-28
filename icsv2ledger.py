@@ -6,29 +6,30 @@
 # Requires Python >= 3.2 and Ledger >= 3.0
 
 import argparse
-import csv
-import io
-import glob
-import mmap
-import sys
-import os
-import hashlib
-import re
-import subprocess
-import readline
 import configparser
+import csv
+import glob
+import hashlib
+import io
+import mmap
+import os
+import re
+import readline
+import subprocess
+import sys
 from argparse import HelpFormatter
 from dataclasses import dataclass
 from datetime import datetime
+from locale import atof
 from operator import attrgetter
-from locale   import atof
-from typing import AnyStr, Pattern, Optional
+from typing import AnyStr, Optional, Pattern
 
 
 class FileType(object):
     """Based on `argparse.FileType` from python3.4.2, but with additional
     support for the `newline` parameter to `open`.
     """
+
     def __init__(self, mode='r', bufsize=-1, encoding=None, errors=None, newline=None):
         self._mode = mode
         self._bufsize = bufsize
@@ -49,19 +50,16 @@ class FileType(object):
 
         # all other arguments are used as file names
         try:
-            return open(string, self._mode, self._bufsize, self._encoding,
-                        self._errors, newline=self._newline)
+            return open(string, self._mode, self._bufsize, self._encoding, self._errors, newline=self._newline)
         except OSError as e:
             message = "can't open '%s': %s"
             raise argparse.ArgumentTypeError(message % (string, e))
 
     def __repr__(self):
         args = self._mode, self._bufsize
-        kwargs = [('encoding', self._encoding), ('errors', self._errors),
-                  ('newline', self._newline)]
+        kwargs = [('encoding', self._encoding), ('errors', self._errors), ('newline', self._newline)]
         args_str = ', '.join([repr(arg) for arg in args if arg != -1] +
-                             ['%s=%r' % (kw, arg) for kw, arg in kwargs
-                              if arg is not None])
+                             ['%s=%r' % (kw, arg) for kw, arg in kwargs if arg is not None])
         return '%s(%s)' % (type(self).__name__, args_str)
 
 
@@ -113,28 +111,25 @@ DEFAULTS = dotdict({
     'ledger_decimal_comma': False,
     'skip_older_than': str(-1),
     'prompt_add_mappings': False,
-    'entry_review': False})
+    'entry_review': False
+})
 
 FILE_DEFAULTS = dotdict({
-    'config_file': [
-        os.path.join('.', '.icsv2ledgerrc'),
-        os.path.join(os.path.expanduser('~'), '.icsv2ledgerrc')],
-    'ledger_file': [
-        os.path.join('.', '.ledger'),
-        os.path.join(os.path.expanduser('~'), '.ledger')],
-    'mapping_file': [
-        os.path.join('.', '.icsv2ledgerrc-mapping'),
-        os.path.join(os.path.expanduser('~'), '.icsv2ledgerrc-mapping')],
-    'accounts_file': [
-        os.path.join('.', '.icsv2ledgerrc-accounts'),
-        os.path.join(os.path.expanduser('~'), '.icsv2ledgerrc-accounts')],
-    'template_file': [
-        os.path.join('.', '.icsv2ledgerrc-template'),
-        os.path.join(os.path.expanduser('~'), '.icsv2ledgerrc-template')],
-    'ledger_binary_file': [
-        '/usr/bin/ledger',
-        '/usr/local/bin/ledger'
-    ]})
+    'config_file': [os.path.join('.', '.icsv2ledgerrc'),
+                    os.path.join(os.path.expanduser('~'), '.icsv2ledgerrc')],
+    'ledger_file': [os.path.join('.', '.ledger'),
+                    os.path.join(os.path.expanduser('~'), '.ledger')],
+    'mapping_file':
+    [os.path.join('.', '.icsv2ledgerrc-mapping'),
+     os.path.join(os.path.expanduser('~'), '.icsv2ledgerrc-mapping')],
+    'accounts_file':
+    [os.path.join('.', '.icsv2ledgerrc-accounts'),
+     os.path.join(os.path.expanduser('~'), '.icsv2ledgerrc-accounts')],
+    'template_file':
+    [os.path.join('.', '.icsv2ledgerrc-template'),
+     os.path.join(os.path.expanduser('~'), '.icsv2ledgerrc-template')],
+    'ledger_binary_file': ['/usr/bin/ledger', '/usr/local/bin/ledger']
+})
 
 DEFAULT_TEMPLATE = """\
 {date} {cleared_character} {payee}
@@ -163,6 +158,7 @@ class SortingHelpFormatter(HelpFormatter):
     """Sort options alphabetically when -h prints usage
     See http://stackoverflow.com/questions/12268602
     """
+
     def add_arguments(self, actions):
         actions = sorted(actions, key=attrgetter('option_strings'))
         super(SortingHelpFormatter, self).add_arguments(actions)
@@ -173,9 +169,7 @@ def decode_escape_sequences(string):
     # fed a complete string with arbitrary characters. Instead, it is used only
     # on the subsequences of the input string that have escape sequences and
     # are guaranteed to only contain ASCII characters.
-    return re.sub(r'(?a)\\[\\\w{}]+',
-                  lambda m: m.group().encode('ascii').decode('unicode_escape'),
-                  string),
+    return re.sub(r'(?a)\\[\\\w{}]+', lambda m: m.group().encode('ascii').decode('unicode_escape'), string),
 
 
 def parse_args_and_config_file():
@@ -188,40 +182,45 @@ def parse_args_and_config_file():
     # Build preparser with only config-file and account
     preparser = argparse.ArgumentParser(
         # Turn off help in first parser because all options are not present
-        add_help=False)
+        add_help=False
+    )
     preparser.add_argument(
-        '--account', '-a',
+        '--account',
+        '-a',
         metavar='STR',
         help=('ledger account used as source'
-              ' (default: {0})'.format(DEFAULTS.account)))
+              ' (default: {0})'.format(DEFAULTS.account))
+    )
     preparser.add_argument(
-        '--config-file', '-c',
+        '--config-file',
+        '-c',
         metavar='FILE',
         help=('configuration file'
-              ' (default search order: {0})'
-              .format(', '.join(FILE_DEFAULTS.config_file))))
+              ' (default search order: {0})'.format(', '.join(FILE_DEFAULTS.config_file)))
+    )
 
     # Parse args with preparser, and find config file
     args, remaining_argv = preparser.parse_known_args()
-    args.config_file = find_first_file(args.config_file,
-                                       FILE_DEFAULTS.config_file)
+    args.config_file = find_first_file(args.config_file, FILE_DEFAULTS.config_file)
 
     # Initialize configparser with DEFAULTS, and then read config file
-    if args.config_file and ('-h' not in remaining_argv and
-                             '--help' not in remaining_argv):
+    if args.config_file and ('-h' not in remaining_argv and '--help' not in remaining_argv):
         config = configparser.RawConfigParser(DEFAULTS)
         config.read(args.config_file)
         if not config.has_section(args.account):
-            print('Config file {0} does not contain section {1}'
-                  .format(args.config_file, args.account),
-                  file=sys.stderr)
+            print(
+                'Config file {0} does not contain section {1}'.format(args.config_file, args.account), file=sys.stderr
+            )
             sys.exit(1)
         defaults = dict(config.items(args.account))
 
         if defaults['src_account']:
-            print('Section {0} in config file {1} contains command line only option src_account'
-                  .format(args.account, args.config_file),
-                  file=sys.stderr)
+            print(
+                'Section {0} in config file {1} contains command line only option src_account'.format(
+                    args.account, args.config_file
+                ),
+                file=sys.stderr
+            )
             sys.exit(1)
 
         defaults['addons'] = {}
@@ -241,7 +240,8 @@ def parse_args_and_config_file():
         # print script description with -h/--help
         description=__doc__,
         # sort options alphabetically
-        formatter_class=SortingHelpFormatter)
+        formatter_class=SortingHelpFormatter
+    )
     parser.set_defaults(**defaults)
 
     parser.add_argument(
@@ -250,200 +250,245 @@ def parse_args_and_config_file():
         type=FileType('r', newline=''),
         default=sys.stdin,
         help=('input filename or stdin in CSV syntax'
-              ' (default: {0})'.format('stdin')))
+              ' (default: {0})'.format('stdin'))
+    )
     parser.add_argument(
         'outfile',
         nargs='?',
         type=FileType('a', encoding='utf-8'),
         default=sys.stdout,
         help=('output filename or stdout in Ledger syntax'
-              ' (default: {0})'.format('stdout')))
+              ' (default: {0})'.format('stdout'))
+    )
     parser.add_argument(
-        '--encoding',
-        metavar='STR',
-        help=('encoding of csv file'
-              ' (default: {0})'.format(DEFAULTS.encoding)))
+        '--encoding', metavar='STR', help=('encoding of csv file'
+                                           ' (default: {0})'.format(DEFAULTS.encoding))
+    )
     parser.add_argument(
         '--ledger-binary',
         metavar='FILE',
-        help=('path to ledger binary'
-              ' (default search order: {0})'
-              .format(', '.join(FILE_DEFAULTS.ledger_binary_file))))
+        help=(
+            'path to ledger binary'
+            ' (default search order: {0})'.format(', '.join(FILE_DEFAULTS.ledger_binary_file))
+        )
+    )
     parser.add_argument(
-        '--ledger-file', '-l',
+        '--ledger-file',
+        '-l',
         metavar='FILE',
-        help=('ledger file where to read payees/accounts'
-              ' (default search order: {0})'
-              .format(', '.join(FILE_DEFAULTS.ledger_file))))
+        help=(
+            'ledger file where to read payees/accounts'
+            ' (default search order: {0})'.format(', '.join(FILE_DEFAULTS.ledger_file))
+        )
+    )
     parser.add_argument(
-        '--quiet', '-q',
+        '--quiet',
+        '-q',
         action='store_true',
         help=('do not prompt if account can be deduced'
-              ' (default: {0})'.format(DEFAULTS.quiet)))
+              ' (default: {0})'.format(DEFAULTS.quiet))
+    )
     parser.add_argument(
         '--src-account',
         metavar='STR',
-        help=('ledger source account to use, overrides --account option specified in config section'
-              ' (default: {0})'.format(DEFAULTS.src_account)))
+        help=(
+            'ledger source account to use, overrides --account option specified in config section'
+            ' (default: {0})'.format(DEFAULTS.src_account)
+        )
+    )
     parser.add_argument(
         '--default-expense',
         metavar='STR',
         help=('ledger account used as destination'
-              ' (default: {0})'.format(DEFAULTS.default_expense)))
+              ' (default: {0})'.format(DEFAULTS.default_expense))
+    )
     parser.add_argument(
         '--skip-lines',
         metavar='INT',
         type=int,
         help=('number of lines to skip from CSV file'
-              ' (default: {0})'.format(DEFAULTS.skip_lines)))
+              ' (default: {0})'.format(DEFAULTS.skip_lines))
+    )
     parser.add_argument(
         '--skip-dupes',
         action='store_true',
-        help=('detect and skip transactions that have already been imported'
-              ' (default: {0})'.format(DEFAULTS.skip_dupes)))
+        help=(
+            'detect and skip transactions that have already been imported'
+            ' (default: {0})'.format(DEFAULTS.skip_dupes)
+        )
+    )
     parser.add_argument(
         '--confirm-dupes',
         action='store_true',
-        help=('detect and interactively skip transactions that have already been imported'
-              ' (default: {0})'.format(DEFAULTS.confirm_dupes)))
+        help=(
+            'detect and interactively skip transactions that have already been imported'
+            ' (default: {0})'.format(DEFAULTS.confirm_dupes)
+        )
+    )
     parser.add_argument(
         '--incremental',
         action='store_true',
         help=('append output as transactions are processed'
-              ' (default: {0})'.format(DEFAULTS.incremental)))
+              ' (default: {0})'.format(DEFAULTS.incremental))
+    )
     parser.add_argument(
         '--reverse',
         action='store_true',
         help=('reverse the order of entries in the CSV file'
-              ' (default: {0})'.format(DEFAULTS.reverse)))
+              ' (default: {0})'.format(DEFAULTS.reverse))
+    )
     parser.add_argument(
         '--cleared-character',
         choices='*! ',
         help=('character to clear a transaction'
-              ' (default: {0})'.format(DEFAULTS.cleared_character)))
+              ' (default: {0})'.format(DEFAULTS.cleared_character))
+    )
     parser.add_argument(
         '--date',
         metavar='INT',
         type=int,
         help=('CSV column number matching date'
-              ' (default: {0})'.format(DEFAULTS.date)))
+              ' (default: {0})'.format(DEFAULTS.date))
+    )
     parser.add_argument(
         '--effective-date',
         metavar='INT',
         type=int,
         help=('CSV column number matching effective date'
-              ' (default: {0})'.format(DEFAULTS.effective_date)))
+              ' (default: {0})'.format(DEFAULTS.effective_date))
+    )
     parser.add_argument(
         '--desc',
         metavar='STR',
         help=('CSV column number matching description'
-              ' (default: {0})'.format(DEFAULTS.desc)))
+              ' (default: {0})'.format(DEFAULTS.desc))
+    )
     parser.add_argument(
         '--debit',
         metavar='INT',
         type=int,
         help=('CSV column number matching debit amount'
-              ' (default: {0})'.format(DEFAULTS.debit)))
+              ' (default: {0})'.format(DEFAULTS.debit))
+    )
     parser.add_argument(
         '--credit',
         metavar='INT',
         type=int,
         help=('CSV column number matching credit amount'
-              ' (default: {0})'.format(DEFAULTS.credit)))
+              ' (default: {0})'.format(DEFAULTS.credit))
+    )
     parser.add_argument(
         '--csv-date-format',
         metavar='STR',
         help=('date format in CSV input file'
-              ' (default: {0})'.format(DEFAULTS.csv_date_format)))
+              ' (default: {0})'.format(DEFAULTS.csv_date_format))
+    )
     parser.add_argument(
         '--ledger-date-format',
         metavar='STR',
         help=('date format for ledger output file'
-              ' (default: {0})'.format(DEFAULTS.ledger_date_format)))
+              ' (default: {0})'.format(DEFAULTS.ledger_date_format))
+    )
     parser.add_argument(
-        '--currency',
-        metavar='STR',
-        help=('the currency of amounts'
-              ' (default: {0})'.format(DEFAULTS.currency)))
+        '--currency', metavar='STR', help=('the currency of amounts'
+                                           ' (default: {0})'.format(DEFAULTS.currency))
+    )
     parser.add_argument(
         '--csv-decimal-comma',
         action='store_true',
         help=('comma as decimal separator in the CSV'
-              ' (default: {0})'.format(DEFAULTS.csv_decimal_comma)))
+              ' (default: {0})'.format(DEFAULTS.csv_decimal_comma))
+    )
     parser.add_argument(
         '--ledger-decimal-comma',
         action='store_true',
         help=('comma as decimal separator in the ledger'
-              ' (default: {0})'.format(DEFAULTS.ledger_decimal_comma)))
+              ' (default: {0})'.format(DEFAULTS.ledger_decimal_comma))
+    )
     parser.add_argument(
         '--accounts-file',
         metavar='FILE',
-        help=('file which holds a list of account names'
-              ' (default search order: {0})'
-              .format(', '.join(FILE_DEFAULTS.accounts_file))))
+        help=(
+            'file which holds a list of account names'
+            ' (default search order: {0})'.format(', '.join(FILE_DEFAULTS.accounts_file))
+        )
+    )
     parser.add_argument(
         '--mapping-file',
         metavar='FILE',
-        help=('file which holds the mappings'
-              ' (default search order: {0})'
-              .format(', '.join(FILE_DEFAULTS.mapping_file))))
+        help=(
+            'file which holds the mappings'
+            ' (default search order: {0})'.format(', '.join(FILE_DEFAULTS.mapping_file))
+        )
+    )
     parser.add_argument(
         '--template-file',
         metavar='FILE',
-        help=('file which holds the template'
-              ' (default search order: {0})'
-              .format(', '.join(FILE_DEFAULTS.template_file))))
+        help=(
+            'file which holds the template'
+            ' (default search order: {0})'.format(', '.join(FILE_DEFAULTS.template_file))
+        )
+    )
     parser.add_argument(
-        '--tags', '-t',
+        '--tags',
+        '-t',
         action='store_true',
         help=('prompt for transaction tags'
-              ' (default: {0})'.format(DEFAULTS.tags)))
+              ' (default: {0})'.format(DEFAULTS.tags))
+    )
     parser.add_argument(
         '--multiline-tags',
         action='store_true',
         help=('format tags on multiple lines'
-              ' (default: {0})'.format(DEFAULTS.multiline_tags)))
+              ' (default: {0})'.format(DEFAULTS.multiline_tags))
+    )
     parser.add_argument(
-        '--clear-screen', '-C',
+        '--clear-screen',
+        '-C',
         action='store_true',
         help=('clear screen for every transaction'
-              ' (default: {0})'.format(DEFAULTS.clear_screen)))
+              ' (default: {0})'.format(DEFAULTS.clear_screen))
+    )
     parser.add_argument(
         '--delimiter',
         metavar='STR',
         type=decode_escape_sequences,
         help=('delimiter between fields in the csv'
-              ' (default: {0})'.format(DEFAULTS.delimiter)))
+              ' (default: {0})'.format(DEFAULTS.delimiter))
+    )
 
     parser.add_argument(
         '--skip-older-than',
         metavar='INT',
         type=int,
-        help=('skip entries more than X days old (-1 indicates keep all)'
-              ' (default: {0})'.format(DEFAULTS.skip_older_than)))
+        help=(
+            'skip entries more than X days old (-1 indicates keep all)'
+            ' (default: {0})'.format(DEFAULTS.skip_older_than)
+        )
+    )
 
     parser.add_argument(
         '--prompt-add-mappings',
         action='store_true',
         help=('ask before adding entries to mapping file'
-              ' (default: {0})'.format(DEFAULTS.prompt_add_mappings)))
+              ' (default: {0})'.format(DEFAULTS.prompt_add_mappings))
+    )
 
     parser.add_argument(
         '--entry-review',
         action='store_true',
-        help=('displays transaction summary and request confirmation before committing to ledger'
-              ' (default: {0})'.format(DEFAULTS.entry_review)))
+        help=(
+            'displays transaction summary and request confirmation before committing to ledger'
+            ' (default: {0})'.format(DEFAULTS.entry_review)
+        )
+    )
 
     args = parser.parse_args(remaining_argv)
 
-    args.ledger_file = find_first_file(
-        args.ledger_file, FILE_DEFAULTS.ledger_file)
-    args.mapping_file = find_first_file(
-        args.mapping_file, FILE_DEFAULTS.mapping_file)
-    args.accounts_file = find_first_file(
-        args.accounts_file, FILE_DEFAULTS.accounts_file)
-    args.template_file = find_first_file(
-        args.template_file, FILE_DEFAULTS.template_file)
+    args.ledger_file = find_first_file(args.ledger_file, FILE_DEFAULTS.ledger_file)
+    args.mapping_file = find_first_file(args.mapping_file, FILE_DEFAULTS.mapping_file)
+    args.accounts_file = find_first_file(args.accounts_file, FILE_DEFAULTS.accounts_file)
+    args.template_file = find_first_file(args.template_file, FILE_DEFAULTS.template_file)
     if args.ledger_binary is not None:
         # if ledger_binary was explicitly specified, check if it actually exists
         if find_first_file(args.ledger_binary, []) is None:
@@ -453,18 +498,14 @@ def parse_args_and_config_file():
             )
     else:
         # otherwise try defaults
-        args.ledger_binary = find_first_file(
-            args.ledger_binary, FILE_DEFAULTS.ledger_binary_file)
+        args.ledger_binary = find_first_file(args.ledger_binary, FILE_DEFAULTS.ledger_binary_file)
 
     if args.ledger_date_format and not args.csv_date_format:
-        print('csv_date_format must be set'
-              ' if ledger_date_format is defined.',
-              file=sys.stderr)
+        print('csv_date_format must be set' ' if ledger_date_format is defined.', file=sys.stderr)
         sys.exit(1)
 
-    if args.encoding.lower() != args.infile.encoding.lower():
-        args.infile = io.TextIOWrapper(args.infile.detach(),
-                                       encoding=args.encoding)
+    if args.encoding and args.infile.encoding and args.encoding.lower() != args.infile.encoding.lower():
+        args.infile = io.TextIOWrapper(args.infile.detach(), encoding=args.encoding)
 
     return args
 
@@ -497,8 +538,7 @@ class Entry:
         self.options = options
 
         if 'addons' in options:
-            self.addons = dict((k, fields[v - 1])
-                               for k, v in options.addons.items())
+            self.addons = dict((k, fields[v - 1]) for k, v in options.addons.items())
         else:
             self.addons = dict()
 
@@ -507,44 +547,43 @@ class Entry:
         entry_date = datetime.strptime(self.date, options.csv_date_format)
         if options.ledger_date_format:
             if options.ledger_date_format != options.csv_date_format:
-                self.date = (datetime
-                             .strptime(self.date, options.csv_date_format)
-                             .strftime(options.ledger_date_format))
+                self.date = (datetime.strptime(self.date, options.csv_date_format).strftime(options.ledger_date_format))
 
         # determine how many days old this entry is
-        self.days_old = (datetime.now()-entry_date).days
+        self.days_old = (datetime.now() - entry_date).days
 
         # convert effective dates
         if options.effective_date:
             self.effective_date = fields[options.effective_date - 1]
             if options.ledger_date_format:
                 if options.ledger_date_format != options.csv_date_format:
-                    self.effective_date = (datetime
-                                 .strptime(self.effective_date, options.csv_date_format)
-                                 .strftime(options.ledger_date_format))
+                    self.effective_date = (
+                        datetime.strptime(self.effective_date,
+                                          options.csv_date_format).strftime(options.ledger_date_format)
+                    )
         else:
             self.effective_date = ""
 
-
         desc = []
-        for index in re.compile(',\s*').split(options.desc):
+        for index in re.compile(r',\s*').split(options.desc):
             desc.append(fields[int(index) - 1].strip())
         self.desc = ' '.join(desc).strip()
 
-        self.credit = get_field_at_index(fields, options.credit, options.csv_decimal_comma, options.ledger_decimal_comma)
+        self.credit = get_field_at_index(
+            fields, options.credit, options.csv_decimal_comma, options.ledger_decimal_comma
+        )
         self.debit = get_field_at_index(fields, options.debit, options.csv_decimal_comma, options.ledger_decimal_comma)
-        if self.credit  and self.debit and atof(self.credit) == 0:
+        if self.credit and self.debit and atof(self.credit) == 0:
             self.credit = ''
         elif self.credit and self.debit and atof(self.debit) == 0:
-            self.debit  = ''
+            self.debit = ''
 
         self.credit_account = options.account
         if options.src_account:
             self.credit_account = options.src_account
 
         self.currency = options.currency
-        self.credit_currency = getattr(
-            options, 'credit_currency', self.currency)
+        self.credit_currency = getattr(options, 'credit_currency', self.currency)
         self.cleared_character = options.cleared_character
 
         if options.template_file:
@@ -556,26 +595,25 @@ class Entry:
         self.raw_csv = raw_csv.strip()
 
         # We also record this - in future we may use it to avoid duplication
-        #self.md5sum = hashlib.md5(self.raw_csv.encode('utf-8')).hexdigest()
-        self.md5sum = hashlib.md5(','.join(x.strip() for x in (self.date,self.desc,self.credit,self.debit,self.credit_account)).encode('utf-8')).hexdigest()
+        # self.md5sum = hashlib.md5(self.raw_csv.encode('utf-8')).hexdigest()
+        self.md5sum = hashlib.md5(
+            ','.join(x.strip()
+                     for x in (self.date, self.desc, self.credit, self.debit, self.credit_account)).encode('utf-8')
+        ).hexdigest()
 
     def prompt(self):
         """
         We print a summary of the record on the screen, and allow you to
         choose the destination account.
         """
-        return '{0} {1:<40} {2}'.format(
-            self.date,
-            self.desc,
-            self.credit if self.credit else "-" + self.debit)
+        return '{0} {1:<40} {2}'.format(self.date, self.desc, self.credit if self.credit else "-" + self.debit)
 
     def _build_entry_str(self, transaction_index, payee, credit_account, debit_account, tags) -> str:
         """
         Return a formatted journal entry recording this Entry against
         the specified Ledger account
         """
-        template = (self.transaction_template
-                    if self.transaction_template else DEFAULT_TEMPLATE)
+        template = (self.transaction_template if self.transaction_template else DEFAULT_TEMPLATE)
         uuid_regex = re.compile(r"UUID:", re.IGNORECASE)
         uuid = [v for v in tags if uuid_regex.match(v)]
         if uuid:
@@ -598,20 +636,17 @@ class Entry:
             'cleared_character': self.cleared_character,
             'payee': payee,
             'transaction_index': transaction_index,
-
             'uuid': uuid,
-
             'debit_account': debit_account,
             'debit_currency': self.currency if self.debit else "",
             'debit': self.debit,
-
             'credit_account': credit_account,
             'credit_currency': self.credit_currency if self.credit else "",
             'credit': self.credit,
-
             'tags': tags,
             'md5sum': self.md5sum,
-            'csv': self.raw_csv}
+            'csv': self.raw_csv
+        }
         format_data.update(self.addons)
 
         # generate and clean output
@@ -671,7 +706,9 @@ def csv_md5sum_from_ledger(ledger_file):
     with open(ledger_file, encoding="utf-8") as f:
         lines = f.read()
         include_files = re.findall(r"include\s+(.*?)\s+", lines)
-    pathes = [ledger_file, ] + include_files
+    pathes = [
+        ledger_file,
+    ] + include_files
     csv_comments = set()
     md5sum_hashes = set()
     pattern = re.compile(r"^\s*[;#]\s*CSV:\s*(.*?)\s*$")
@@ -706,9 +743,7 @@ def from_ledger(ledger_file, ledger_binary_file, command):
         ledger = 'ledger'
     cmd = [ledger, "-f", ledger_file, command]
     try:
-        p = subprocess.Popen(
-            cmd,
-            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         (stdout_data, stderr_data) = p.communicate()
         items = set()
         for item in stdout_data.decode('utf-8').splitlines():
@@ -744,9 +779,7 @@ def read_mapping_file(map_file) -> [MappingInfo]:
                     try:
                         pattern = re.compile(pattern[1:-1])
                     except re.error as e:
-                        print("Invalid regex '{0}' in '{1}': {2}"
-                              .format(pattern, map_file, e),
-                              file=sys.stderr)
+                        print("Invalid regex '{0}' in '{1}': {2}".format(pattern, map_file, e), file=sys.stderr)
                         sys.exit(1)
                 mappings.append(MappingInfo(pattern, payee, account, tags, transfer_to, transfer_to_file))
     return mappings
@@ -796,7 +829,7 @@ def prompt_for_tags(prompt, values, default):
                 tags.remove(value)
         else:
             value = tagify(value)
-            if not value in tags:
+            if value not in tags:
                 tags.append(value)
         value = prompt_for_value(prompt, values, ", ".join(tags))
     return tags
@@ -837,8 +870,7 @@ def reset_stdin():
     elif os.name == 'nt':
         sys.stdin = open('CON', 'r')
     else:
-        print('Unrecognized operating system.',
-              file=sys.stderr)
+        print('Unrecognized operating system.', file=sys.stderr)
         sys.exit(1)
 
 
@@ -891,7 +923,7 @@ def main(options):
                 # If the pattern isn't a string it's a regex
                 match = m.pattern.match(entry.desc)
                 if match:
-                #if m[0].match(entry.desc):
+                    # if m[0].match(entry.desc):
                     payee = m.payee
                     # perform regexp substitution if captures were used
                     if match.groups():
@@ -904,9 +936,9 @@ def main(options):
         if options.quiet and found:
             pass
         else:
-            #if options.clear_screen:
+            # if options.clear_screen:
             #    print('\033[2J\033[;H')
-            #print('\n' + entry.prompt())
+            # print('\n' + entry.prompt())
             value = prompt_for_value('Payee', possible_payees, payee)
             if value:
                 modified = modified if modified else value != payee
@@ -931,8 +963,7 @@ def main(options):
             if value.upper().strip() not in ('N', 'NO'):
                 # Add new or changed mapping to mappings and append to file
                 mappings.append(MappingInfo(entry.desc, payee, account, tags, None, None))
-                append_mapping_file(options.mapping_file,
-                                entry.desc, payee, account, tags)
+                append_mapping_file(options.mapping_file, entry.desc, payee, account, tags)
 
             # Add new possible_values to possible values lists
             possible_payees.add(payee)
@@ -951,7 +982,7 @@ def main(options):
         csv_lines = get_csv_lines(in_file)
         if in_file.name == '<stdin>':
             reset_stdin()
-        for line in  process_csv_lines(csv_lines):
+        for line in process_csv_lines(csv_lines):
             print(line, sep='\n', file=out_file)
             out_file.flush()
 
@@ -969,8 +1000,7 @@ def main(options):
     def process_csv_lines(csv_lines):
         dialect = None
         try:
-            dialect = csv.Sniffer().sniff(
-                    "".join(csv_lines[:3]), options.delimiter)
+            dialect = csv.Sniffer().sniff("".join(csv_lines[:3]), options.delimiter)
         except csv.Error:  # can't guess specific dialect, try without one
             pass
 
@@ -981,8 +1011,7 @@ def main(options):
             if len(row) == 0:
                 continue
 
-            entry = Entry(row, csv_lines[i],
-                          options)
+            entry = Entry(row, csv_lines[i], options)
 
             # detect duplicate entries in the ledger file and optionally skip or prompt user for action
             # if options.skip_dupes and csv_lines[i].strip() in csv_comments:
@@ -1008,8 +1037,9 @@ def main(options):
                         # request confirmation before committing transaction
                         print('\n' + 'Ledger Entry:')
                         print(entry.journal_entry(transaction_index + 1, payee, account, tags))
-                        yn_response = prompt_for_value('Commit transaction (Commit, Modify, Skip)?', ('C', 'M', 'S'),
-                                                       value)
+                        yn_response = prompt_for_value(
+                            'Commit transaction (Commit, Modify, Skip)?', ('C', 'M', 'S'), value
+                        )
                         if yn_response:
                             value = yn_response
                     if value.upper().strip() not in ('C', 'COMMIT'):

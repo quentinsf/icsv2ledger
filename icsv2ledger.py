@@ -25,7 +25,7 @@ from operator import attrgetter
 from typing import AnyStr, Optional, Pattern
 
 
-class FileType(object):
+class FileType:
     """Based on `argparse.FileType` from python3.4.2, but with additional
     support for the `newline` parameter to `open`.
     """
@@ -103,7 +103,6 @@ DEFAULTS = dotdict({
     'skip_lines': str(1),
     'skip_dupes': False,
     'confirm_dupes': False,
-    'incremental': False,
     'tags': False,
     'multiline_tags': False,
     'delimiter': ',',
@@ -324,12 +323,6 @@ def parse_args_and_config_file():
             'detect and interactively skip transactions that have already been imported'
             ' (default: {0})'.format(DEFAULTS.confirm_dupes)
         )
-    )
-    parser.add_argument(
-        '--incremental',
-        action='store_true',
-        help=('append output as transactions are processed'
-              ' (default: {0})'.format(DEFAULTS.incremental))
     )
     parser.add_argument(
         '--reverse',
@@ -972,19 +965,22 @@ def main(options):
         return (payee, account, tags, transfer_to, transfer_to_file)
 
     def process_input_output(in_file, out_file):
-        """ Read CSV lines either from filename or stdin.
-        Process them.
-        Write Ledger lines either to filename or stdout.
         """
-        if not options.incremental:
-            out_file.truncate(0)
+        JC: Write each transaction to the out file, one at a time, to allow
+        others to adjust the outfile in between transaction ingestion.
+        Process them.
+        """
+        # Clean out file and close it
+        out_file.truncate(0)
+        out_file.close()
 
         csv_lines = get_csv_lines(in_file)
         if in_file.name == '<stdin>':
             reset_stdin()
+
         for line in process_csv_lines(csv_lines):
-            print(line, sep='\n', file=out_file)
-            out_file.flush()
+            with open(out_file.name, 'a') as f:
+                f.write(line + '\n')
 
     def get_csv_lines(in_file):
         """

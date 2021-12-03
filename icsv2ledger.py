@@ -867,6 +867,74 @@ def reset_stdin():
         sys.exit(1)
 
 
+def get_payee_and_account(options, mappings, entry, possible_accounts, possible_payees, possible_tags, possible_yesno):
+    payee = entry.desc
+    account = options.default_expense
+    tags = []
+    transfer_to = None
+    transfer_to_file = None
+    found = False
+    # Try to match entry desc with mappings patterns
+    for m in mappings:
+        pattern = m.pattern
+        if isinstance(pattern, str):
+            if entry.desc == pattern:
+                payee, account, tags = m.payee, m.account, m.tags
+                transfer_to, transfer_to_file = m.transfer_to, m.transfer_to_file
+                found = True  # do not break here, later mapping must win
+        else:
+            # If the pattern isn't a string it's a regex
+            match = m.pattern.match(entry.desc)
+            if match:
+                # if m[0].match(entry.desc):
+                payee = m.payee
+                # perform regexp substitution if captures were used
+                if match.groups():
+                    payee = m.pattern.sub(m.payee, entry.desc)
+                account, tags = m.account, m.tags
+                transfer_to, transfer_to_file = m.transfer_to, m.transfer_to_file
+                found = True
+
+    modified = False
+    if options.quiet and found:
+        pass
+    else:
+        # if options.clear_screen:
+        #    print('\033[2J\033[;H')
+        # print('\n' + entry.prompt())
+        value = prompt_for_value('Payee', possible_payees, payee)
+        if value:
+            modified = modified if modified else value != payee
+            payee = value
+        value = prompt_for_value('Account', possible_accounts, account)
+        if value:
+            modified = modified if modified else value != account
+            account = value
+        if options.tags:
+            value = prompt_for_tags('Tag', possible_tags, tags)
+            if value:
+                modified = modified if modified else value != tags
+                tags = value
+
+    if not found or (found and modified):
+        value = 'Y'
+        # if prompt-add-mappings option passed then request confirmation before adding to mapping file
+        if options.prompt_add_mappings:
+            yn_response = prompt_for_value('Append to mapping file?', possible_yesno, 'Y')
+            if yn_response:
+                value = yn_response
+        if value.upper().strip() not in ('N', 'NO'):
+            # Add new or changed mapping to mappings and append to file
+            mappings.append(MappingInfo(entry.desc, payee, account, tags, None, None))
+            append_mapping_file(options.mapping_file, entry.desc, payee, account, tags)
+
+        # Add new possible_values to possible values lists
+        possible_payees.add(payee)
+        possible_accounts.add(account)
+
+    return (payee, account, tags, transfer_to, transfer_to_file)
+
+
 def main(options):
 
     # Define responses to yes/no prompts
@@ -896,73 +964,6 @@ def main(options):
         possible_payees.add(m.payee)
         possible_accounts.add(m.account)
         possible_tags.update(set(m.tags))
-
-    def get_payee_and_account(entry):
-        payee = entry.desc
-        account = options.default_expense
-        tags = []
-        transfer_to = None
-        transfer_to_file = None
-        found = False
-        # Try to match entry desc with mappings patterns
-        for m in mappings:
-            pattern = m.pattern
-            if isinstance(pattern, str):
-                if entry.desc == pattern:
-                    payee, account, tags = m.payee, m.account, m.tags
-                    transfer_to, transfer_to_file = m.transfer_to, m.transfer_to_file
-                    found = True  # do not break here, later mapping must win
-            else:
-                # If the pattern isn't a string it's a regex
-                match = m.pattern.match(entry.desc)
-                if match:
-                    # if m[0].match(entry.desc):
-                    payee = m.payee
-                    # perform regexp substitution if captures were used
-                    if match.groups():
-                        payee = m.pattern.sub(m.payee, entry.desc)
-                    account, tags = m.account, m.tags
-                    transfer_to, transfer_to_file = m.transfer_to, m.transfer_to_file
-                    found = True
-
-        modified = False
-        if options.quiet and found:
-            pass
-        else:
-            # if options.clear_screen:
-            #    print('\033[2J\033[;H')
-            # print('\n' + entry.prompt())
-            value = prompt_for_value('Payee', possible_payees, payee)
-            if value:
-                modified = modified if modified else value != payee
-                payee = value
-            value = prompt_for_value('Account', possible_accounts, account)
-            if value:
-                modified = modified if modified else value != account
-                account = value
-            if options.tags:
-                value = prompt_for_tags('Tag', possible_tags, tags)
-                if value:
-                    modified = modified if modified else value != tags
-                    tags = value
-
-        if not found or (found and modified):
-            value = 'Y'
-            # if prompt-add-mappings option passed then request confirmation before adding to mapping file
-            if options.prompt_add_mappings:
-                yn_response = prompt_for_value('Append to mapping file?', possible_yesno, 'Y')
-                if yn_response:
-                    value = yn_response
-            if value.upper().strip() not in ('N', 'NO'):
-                # Add new or changed mapping to mappings and append to file
-                mappings.append(MappingInfo(entry.desc, payee, account, tags, None, None))
-                append_mapping_file(options.mapping_file, entry.desc, payee, account, tags)
-
-            # Add new possible_values to possible values lists
-            possible_payees.add(payee)
-            possible_accounts.add(account)
-
-        return (payee, account, tags, transfer_to, transfer_to_file)
 
     def process_input_output(in_file, out_file):
         """
@@ -1025,7 +1026,9 @@ def main(options):
                     if value.upper().strip() not in ('N', 'NO'):
                         continue
                 while True:
-                    payee, account, tags, transfer_to, transfer_to_file = get_payee_and_account(entry)
+                    payee, account, tags, transfer_to, transfer_to_file = get_payee_and_account(
+                        options, mappings, entry, possible_accounts, possible_payees, possible_tags, possible_yesno
+                    )
                     value = 'C'
                     if options.entry_review:
                         # need to display ledger formatted entry here

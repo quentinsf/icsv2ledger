@@ -828,7 +828,7 @@ def prompt_for_tags(prompt, values, default):
     return tags
 
 
-def prompt_for_value(prompt, values, default):
+def prompt_for_value(prompt: str, values, default: str) -> str:
 
     def completer(text, state):
         for val in values:

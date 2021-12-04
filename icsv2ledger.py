@@ -22,7 +22,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from locale import atof
 from operator import attrgetter
-from typing import AnyStr, Optional, Pattern
+from typing import AnyStr, List, Optional, Pattern, Tuple
 
 
 class FileType:
@@ -867,7 +867,8 @@ def reset_stdin():
         sys.exit(1)
 
 
-def get_payee_and_account(options, mappings, entry, possible_accounts, possible_payees, possible_tags, possible_yesno):
+def get_payee_and_account(options, mappings, entry, possible_accounts, possible_payees, possible_tags,
+                          possible_yesno) -> Tuple[str, str, List[str], str, str]:
     payee = entry.desc
     account = options.default_expense
     tags = []

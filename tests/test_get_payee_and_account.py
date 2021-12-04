@@ -1,4 +1,5 @@
 import argparse
+import pathlib
 from typing import Callable
 from unittest import mock
 
@@ -6,7 +7,11 @@ from icsv2ledger import Entry, get_payee_and_account
 
 
 @mock.patch('icsv2ledger.prompt_for_value')
-def test(mock_prompt_for_value: Callable) -> None:
+def test(mock_prompt_for_value: Callable, tmp_path: pathlib.Path) -> None:
+    """
+    Mapping file is empty, new mapping based on input is written to file.
+    """
+    mapping_file = tmp_path / 'mapping.txt'
     options = argparse.Namespace(
         account='Assets:Bank:Current',
         cleared_character='*',
@@ -21,7 +26,7 @@ def test(mock_prompt_for_value: Callable) -> None:
         effective_date=0,
         ledger_date_format='',
         ledger_decimal_comma=False,
-        mapping_file='stubs/simple_mapping.txt',
+        mapping_file=str(mapping_file),
         prompt_add_mappings=False,
         quiet=True,
         src_account='',
@@ -38,10 +43,16 @@ def test(mock_prompt_for_value: Callable) -> None:
     possible_payees = set()
     possible_tags = set()
     possible_yesno = set(['N', 'Y'])
-    mock_prompt_for_value.return_value = "__PROMPT_VALUE__"
+    mock_prompt_for_value.side_effect = ["__PAYEE__", "__ACCOUNT__"]
 
     result = get_payee_and_account(
         options, mappings, entry, possible_accounts, possible_payees, possible_tags, possible_yesno
     )
 
-    assert result == ()
+    payee, account, tags, transfer_to, transfer_to_file = result
+    assert payee == '__PAYEE__'
+    assert account == '__ACCOUNT__'
+    assert tags == []
+    assert transfer_to is None
+    assert transfer_to_file is None
+    assert mapping_file.open().read() == 'TRANSFER RECEIVED MR UNKNOWN,__PAYEE__,__ACCOUNT__\n'

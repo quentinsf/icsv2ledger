@@ -102,3 +102,42 @@ def test_matches(mock_prompt_for_value: Callable, options: argparse.Namespace, m
     assert transfer_to is None
     assert transfer_to_file is None
     assert mapping_file.open().read() == original_mapping_file_contents
+
+
+@mock.patch('icsv2ledger.prompt_for_value')
+def test_multi_matches(
+    mock_prompt_for_value: Callable, options: argparse.Namespace, mapping_file: pathlib.Path
+) -> None:
+    """
+    Mapping file contains a two mappings that matche this transaction, user
+    picks one and leaves it unchanged. Mapping file is not changed.
+    """
+    original_mapping_file_contents = (
+        "TRANSFER RECEIVED MR UNKNOWN,Mr Unknown,Income:Earnings\n"
+        "TRANSFER RECEIVED MR UNKNOWN,Mr Unknown 2,Second:Account\n"
+        "SHOP A PURCHASE,Shop A,Expenses:Things\n"
+    )
+    mapping_file.write_text(original_mapping_file_contents)
+    mappings = read_mapping_file(options.mapping_file)
+    entry = Entry(
+        fields=['16/03/2019', 'TRANSFER RECEIVED MR UNKNOWN', '', '250,73', 'EUR'],
+        raw_csv='16/03/2019;TRANSFER RECEIVED MR UNKNOWN;;250,73;EUR',
+        options=options,
+    )
+    possible_accounts = set()
+    possible_payees = set()
+    possible_tags = set()
+    possible_yesno = set(['N', 'Y'])
+    mock_prompt_for_value.side_effect = ["Mr Unknown", "Income:Earnings"]
+
+    result = get_payee_and_account(
+        options, mappings, entry, possible_accounts, possible_payees, possible_tags, possible_yesno
+    )
+
+    payee, account, tags, transfer_to, transfer_to_file = result
+    assert payee == 'Mr Unknown'
+    assert account == 'Income:Earnings'
+    assert tags == []
+    assert transfer_to is None
+    assert transfer_to_file is None
+    assert mapping_file.open().read() == original_mapping_file_contents

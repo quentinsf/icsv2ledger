@@ -867,10 +867,10 @@ def reset_stdin():
         sys.exit(1)
 
 
-def get_payee_and_account(options, mappings, entry, possible_accounts, possible_payees, possible_tags,
-                          possible_yesno) -> Tuple[str, str, List[str], str, str]:
+def get_best_mapping(mappings: list, entry: Entry,
+                     default_account: str) -> Tuple[bool, Tuple[str, str, List[str], str, str]]:
     payee = entry.desc
-    account = options.default_expense
+    account = default_account
     tags = []
     transfer_to = None
     transfer_to_file = None
@@ -895,6 +895,23 @@ def get_payee_and_account(options, mappings, entry, possible_accounts, possible_
                 account, tags = m.account, m.tags
                 transfer_to, transfer_to_file = m.transfer_to, m.transfer_to_file
                 found = True
+
+    return found, (payee, account, tags, transfer_to, transfer_to_file)
+    """
+    choice = 0
+    while choice < 1 or choice > num:
+        try:
+            choice = int(input('Which? [1 to {}] '.format(num)))
+        except ValueError:
+            choice = 0
+    """
+
+
+def get_payee_and_account(options, mappings, entry, possible_accounts, possible_payees, possible_tags,
+                          possible_yesno) -> Tuple[str, str, List[str], str, str]:
+
+    found, (payee, account, tags, transfer_to,
+            transfer_to_file) = get_best_mapping(mappings, entry, options.default_expense)
 
     modified = False
     if options.quiet and found:

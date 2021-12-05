@@ -3,16 +3,19 @@ import pathlib
 from typing import Callable
 from unittest import mock
 
-from icsv2ledger import Entry, get_payee_and_account
+import pytest
+
+from icsv2ledger import Entry, get_payee_and_account, read_mapping_file
 
 
-@mock.patch('icsv2ledger.prompt_for_value')
-def test(mock_prompt_for_value: Callable, tmp_path: pathlib.Path) -> None:
-    """
-    Mapping file is empty, new mapping based on input is written to file.
-    """
-    mapping_file = tmp_path / 'mapping.txt'
-    options = argparse.Namespace(
+@pytest.fixture
+def mapping_file(tmp_path: pathlib.Path) -> pathlib.Path:
+    return tmp_path / 'mapping.txt'
+
+
+@pytest.fixture
+def options(mapping_file: pathlib.Path) -> argparse.Namespace:
+    return argparse.Namespace(
         account='Assets:Bank:Current',
         cleared_character='*',
         credit=4,
@@ -33,6 +36,16 @@ def test(mock_prompt_for_value: Callable, tmp_path: pathlib.Path) -> None:
         tags=False,
         template_file=None,
     )
+
+
+# --- TESTS ---
+
+
+@mock.patch('icsv2ledger.prompt_for_value')
+def test_new(mock_prompt_for_value: Callable, options: argparse.Namespace, mapping_file: pathlib.Path) -> None:
+    """
+    Mapping file is empty, new mapping based on input is written to file.
+    """
     mappings = []
     entry = Entry(
         fields=['16/03/2019', 'TRANSFER RECEIVED MR UNKNOWN', '', '250,73', 'EUR'],
@@ -56,3 +69,36 @@ def test(mock_prompt_for_value: Callable, tmp_path: pathlib.Path) -> None:
     assert transfer_to is None
     assert transfer_to_file is None
     assert mapping_file.open().read() == 'TRANSFER RECEIVED MR UNKNOWN,__PAYEE__,__ACCOUNT__\n'
+
+
+@mock.patch('icsv2ledger.prompt_for_value')
+def test_matches(mock_prompt_for_value: Callable, options: argparse.Namespace, mapping_file: pathlib.Path) -> None:
+    """
+    Mapping file contains a single mapping that matches this transaction, user
+    confirms the entry using the suggested data so no mapping file changes.
+    """
+    original_mapping_file_contents = "TRANSFER RECEIVED MR UNKNOWN,Mr Unknown,Income:Earnings\n"
+    mapping_file.write_text(original_mapping_file_contents)
+    mappings = read_mapping_file(options.mapping_file)
+    entry = Entry(
+        fields=['16/03/2019', 'TRANSFER RECEIVED MR UNKNOWN', '', '250,73', 'EUR'],
+        raw_csv='16/03/2019;TRANSFER RECEIVED MR UNKNOWN;;250,73;EUR',
+        options=options,
+    )
+    possible_accounts = set()
+    possible_payees = set()
+    possible_tags = set()
+    possible_yesno = set(['N', 'Y'])
+    mock_prompt_for_value.side_effect = ["Mr Unknown", "Income:Earnings"]
+
+    result = get_payee_and_account(
+        options, mappings, entry, possible_accounts, possible_payees, possible_tags, possible_yesno
+    )
+
+    payee, account, tags, transfer_to, transfer_to_file = result
+    assert payee == 'Mr Unknown'
+    assert account == 'Income:Earnings'
+    assert tags == []
+    assert transfer_to is None
+    assert transfer_to_file is None
+    assert mapping_file.open().read() == original_mapping_file_contents

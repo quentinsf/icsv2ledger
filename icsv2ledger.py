@@ -896,17 +896,23 @@ def get_best_mapping(mappings: list, entry: Entry, default_account: str) -> Tupl
         best_mapping = matching_mappings[0]
     else:
         # Ask user to pick the best mapping to use
-        """
+        num_mappings = len(matching_mappings)
+        for pos, bm in enumerate(matching_mappings):
+            print(f"{pos + 1}:\t{bm.payee}\t{bm.account}")
         choice = 0
-        while choice < 1 or choice > num:
+        while choice < 1 or choice > num_mappings:
+            pick = get_num_mapping(num_mappings)
             try:
-                choice = int(input('Which? [1 to {}] '.format(num)))
+                choice = int(pick)
             except ValueError:
-                choice = 0
-        """
-        best_mapping = matching_mappings[-1]
+                choice = 1
+        best_mapping = matching_mappings[choice - 1]
 
     return bool(matching_mappings), best_mapping
+
+
+def get_num_mapping(num_mappings: int) -> str:
+    return input(f'Which? [1 to {num_mappings}] ')
 
 
 def get_payee_and_account(options, mappings, entry, possible_accounts, possible_payees, possible_tags,

@@ -104,13 +104,14 @@ def test_matches(mock_prompt_for_value: Callable, options: argparse.Namespace, m
     assert mapping_file.open().read() == original_mapping_file_contents
 
 
+@mock.patch('icsv2ledger.get_num_mapping')
 @mock.patch('icsv2ledger.prompt_for_value')
 def test_multi_matches(
-    mock_prompt_for_value: Callable, options: argparse.Namespace, mapping_file: pathlib.Path
+    mock_prompt_for_value, mock_get_num_mapping, options: argparse.Namespace, mapping_file: pathlib.Path
 ) -> None:
     """
-    Mapping file contains a two mappings that matche this transaction, user
-    picks one and leaves it unchanged. Mapping file is not changed.
+    Mapping file contains a two mappings that match this transaction, user
+    picks first one and leaves it unchanged. Mapping file is not changed.
     """
     original_mapping_file_contents = (
         "TRANSFER RECEIVED MR UNKNOWN,Mr Unknown,Income:Earnings\n"
@@ -129,6 +130,7 @@ def test_multi_matches(
     possible_tags = set()
     possible_yesno = set(['N', 'Y'])
     mock_prompt_for_value.side_effect = ["Mr Unknown", "Income:Earnings"]
+    mock_get_num_mapping.return_value = '1'
 
     result = get_payee_and_account(
         options, mappings, entry, possible_accounts, possible_payees, possible_tags, possible_yesno

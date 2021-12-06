@@ -867,51 +867,59 @@ def reset_stdin():
         sys.exit(1)
 
 
-def get_best_mapping(mappings: list, entry: Entry,
-                     default_account: str) -> Tuple[bool, Tuple[str, str, List[str], str, str]]:
-    payee = entry.desc
-    account = default_account
-    tags = []
-    transfer_to = None
-    transfer_to_file = None
-    found = False
+def get_best_mapping(mappings: list, entry: Entry, default_account: str) -> Tuple[bool, MappingInfo]:
+
+    matching_mappings = []
+
     # Try to match entry desc with mappings patterns
     for m in mappings:
         pattern = m.pattern
         if isinstance(pattern, str):
             if entry.desc == pattern:
-                payee, account, tags = m.payee, m.account, m.tags
-                transfer_to, transfer_to_file = m.transfer_to, m.transfer_to_file
-                found = True  # do not break here, later mapping must win
+                matching_mappings.append(m)
         else:
             # If the pattern isn't a string it's a regex
             match = m.pattern.match(entry.desc)
             if match:
-                # if m[0].match(entry.desc):
-                payee = m.payee
-                # perform regexp substitution if captures were used
-                if match.groups():
-                    payee = m.pattern.sub(m.payee, entry.desc)
-                account, tags = m.account, m.tags
-                transfer_to, transfer_to_file = m.transfer_to, m.transfer_to_file
-                found = True
+                matching_mappings.append(m)
+    if not matching_mappings:
+        # Return a default mapping
+        best_mapping = MappingInfo(
+            pattern='',
+            payee=entry.desc,
+            account=default_account,
+            tags=[],
+            transfer_to=None,
+            transfer_to_file=None,
+        )
+    elif len(matching_mappings) == 1:
+        best_mapping = matching_mappings[0]
+    else:
+        # Ask user to pick the best mapping to use
+        """
+        choice = 0
+        while choice < 1 or choice > num:
+            try:
+                choice = int(input('Which? [1 to {}] '.format(num)))
+            except ValueError:
+                choice = 0
+        """
+        best_mapping = matching_mappings[-1]
 
-    return found, (payee, account, tags, transfer_to, transfer_to_file)
-    """
-    choice = 0
-    while choice < 1 or choice > num:
-        try:
-            choice = int(input('Which? [1 to {}] '.format(num)))
-        except ValueError:
-            choice = 0
-    """
+    return bool(matching_mappings), best_mapping
 
 
 def get_payee_and_account(options, mappings, entry, possible_accounts, possible_payees, possible_tags,
                           possible_yesno) -> Tuple[str, str, List[str], str, str]:
 
-    found, (payee, account, tags, transfer_to,
-            transfer_to_file) = get_best_mapping(mappings, entry, options.default_expense)
+    found, best_mapping = get_best_mapping(mappings, entry, options.default_expense)
+
+    # perform regexp substitution if captures were used
+    # payee = best_mapping.payee
+    # if match.groups():
+    #     payee = m.pattern.sub(m.payee, entry.desc)
+    payee, account, tags = best_mapping.payee, best_mapping.account, best_mapping.tags
+    transfer_to, transfer_to_file = best_mapping.transfer_to, best_mapping.transfer_to_file
 
     modified = False
     if options.quiet and found:

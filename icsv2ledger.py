@@ -647,7 +647,7 @@ def get_field_at_index(fields, index, csv_decimal_comma, ledger_decimal_comma):
     if csv_decimal_comma:
         decimal_separator = ','
     else:
-        decimal_separator = '.'
+        decimal_separator = '\\.'
 
     re_non_number = '[^-0-9' + decimal_separator + ']'
 

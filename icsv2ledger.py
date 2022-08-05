@@ -178,6 +178,14 @@ def decode_escape_sequences(string):
                   string),
 
 
+def config_to_dict(config, key, defaults):
+    d = dict(config.items(key))
+    for k,v in defaults.items():
+        if type(v) is bool and type(d[k]) is not bool:
+            d[k] = config.getboolean(key, k)
+    return d
+
+
 def parse_args_and_config_file():
     """ Read options from config file and CLI args
     1. Reads hard coded DEFAULTS
@@ -216,7 +224,7 @@ def parse_args_and_config_file():
                   .format(args.config_file, args.account),
                   file=sys.stderr)
             sys.exit(1)
-        defaults = dict(config.items(args.account))
+        defaults = config_to_dict(config, args.account, DEFAULTS)
 
         if defaults['src_account']:
             print('Section {0} in config file {1} contains command line only option src_account'
@@ -639,7 +647,7 @@ def get_field_at_index(fields, index, csv_decimal_comma, ledger_decimal_comma):
     if csv_decimal_comma:
         decimal_separator = ','
     else:
-        decimal_separator = '.'
+        decimal_separator = '\\.'
 
     re_non_number = '[^-0-9' + decimal_separator + ']'
 
